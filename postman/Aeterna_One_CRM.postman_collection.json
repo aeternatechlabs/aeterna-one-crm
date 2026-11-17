@@ -1,0 +1,659 @@
+{
+  "info": {
+    "_postman_id": "aeterna-one-crm-collection-v1",
+    "name": "Aeterna One CRM — Complete API Collection",
+    "description": "Comprehensive Postman API collection for Aeterna One CRM backend. Includes Health, One-Time Super Admin Provisioning, Authentication, Role-Based Access Control (RBAC), Staff Directory, and Student Pipeline management.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "devKey",
+      "value": "aeterna_dev_secret_key_2026_super_admin_setup",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "superAdminEmail",
+      "value": "admin@aeterna.com",
+      "type": "string"
+    },
+    {
+      "key": "superAdminPassword",
+      "value": "Password@123",
+      "type": "string"
+    },
+    {
+      "key": "studentId",
+      "value": "6afada000e1533f3f64c1822",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Health & Monitoring",
+      "item": [
+        {
+          "name": "Root Health Check (/health)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Public liveness probe. Returns 200 OK when service and database are operational; returns 503 Service Unavailable if database is disconnected."
+          }
+        },
+        {
+          "name": "API v1 Health Check (/api/v1/health)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "health"]
+            },
+            "description": "API v1 Health status. Includes timestamp, database connection status, supported branches, and API version."
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Super Admin Provisioning (One-Time Gate)",
+      "item": [
+        {
+          "name": "1.1 Create Initial Super Admin (Valid Developer Key)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-developer-key",
+                "value": "{{devKey}}",
+                "description": "Developer setup key for one-time initialization"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sachin Tiwari (Super Admin)\",\n  \"email\": \"admin@aeterna.com\",\n  \"password\": \"Password@123\",\n  \"phone\": \"+91 99000 11223\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/setup-super-admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "setup-super-admin"]
+            },
+            "description": "Creates the one and only Super Admin for the CRM. Succeeds only when no Super Admin exists in the database and a valid developer key is provided."
+          }
+        },
+        {
+          "name": "1.2 Unauthorized Attempt without Developer Key (403 Funny Error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sneaky Hacker\",\n  \"email\": \"hacker@test.com\",\n  \"password\": \"Password@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/setup-super-admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "setup-super-admin"]
+            },
+            "description": "Simulates an attacker trying to create a Super Admin without the developer key. Triggers a 403 Forbidden with funny Bollywood security message."
+          }
+        },
+        {
+          "name": "1.3 Duplicate Super Admin Attempt (403 Blocked)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-developer-key",
+                "value": "{{devKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Second Super Admin\",\n  \"email\": \"second.admin@aeterna.com\",\n  \"password\": \"Password@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/setup-super-admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "setup-super-admin"]
+            },
+            "description": "Attempts to create a second Super Admin when one already exists. Triggers 403 Forbidden: 'There can only be ONE Super Admin'."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication & Sessions",
+      "item": [
+        {
+          "name": "2.1 Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.statusCode === 200 && res.data && res.data.token) {",
+                  "    pm.collectionVariables.set('token', res.data.token);",
+                  "    console.log('Access token saved to collection variable {{token}}');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superAdminEmail}}\",\n  \"password\": \"{{superAdminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Authenticates user credentials, sets HTTP-only cookies, returns JWT access token, and automatically saves token into Postman collection variables."
+          }
+        },
+        {
+          "name": "2.2 Get Current Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Retrieves current authenticated user details from JWT token or cookie."
+          }
+        },
+        {
+          "name": "2.3 Refresh Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "description": "Refreshes expired access token using refreshToken from cookie or JSON request body."
+          }
+        },
+        {
+          "name": "2.4 Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "Clears authentication cookies and invalidates session."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Staff Provisioning (Super Admin Only)",
+      "item": [
+        {
+          "name": "3.1 Provision Staff (Counsellor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Kavita Sharma\",\n  \"email\": \"kavita.sharma@aeterna.com\",\n  \"password\": \"Password@123\",\n  \"role\": \"counsellor\",\n  \"branch\": \"bengaluru\",\n  \"phone\": \"+91 98860 12345\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Allows Super Admin to provision team members (branch_manager, counsellor, application_officer, marketing)."
+          }
+        },
+        {
+          "name": "3.2 Provision Staff (Branch Manager)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Suresh Patel\",\n  \"email\": \"suresh.patel@aeterna.com\",\n  \"password\": \"Password@123\",\n  \"role\": \"branch_manager\",\n  \"branch\": \"mysuru\",\n  \"phone\": \"+91 98450 67890\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Provisions a branch manager for Mysuru branch."
+          }
+        },
+        {
+          "name": "3.3 Blocked: Provision Super Admin via /register (403 Funny Error)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cloned Super Admin\",\n  \"email\": \"clone.admin@aeterna.com\",\n  \"password\": \"Password@123\",\n  \"role\": \"super_admin\",\n  \"branch\": \"all\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Attempts to create a second Super Admin through /register API. Blocked with 403 Forbidden and funny security message."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Staff Users Directory",
+      "item": [
+        {
+          "name": "4.1 Get Staff Directory (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Lists staff members. Automatically filtered by user branch for branch managers; global for Super Admin."
+          }
+        },
+        {
+          "name": "4.2 Filter Staff by Role & Branch",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users?role=counsellor&branch=bengaluru",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "counsellor"
+                },
+                {
+                  "key": "branch",
+                  "value": "bengaluru"
+                }
+              ]
+            },
+            "description": "Filters staff users by specific role and branch."
+          }
+        },
+        {
+          "name": "4.3 Search Staff by Name/Email",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users?search=priya",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "priya"
+                }
+              ]
+            },
+            "description": "Searches staff directory with regex-safe sanitized input."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Student Pipeline",
+      "item": [
+        {
+          "name": "5.1 List Pipeline Students",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pipeline?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pipeline"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Returns paginated list of students in the pipeline. Accessible to Super Admin, Branch Manager, Counsellor, and Application Officer. (Marketing role blocked with 403)."
+          }
+        },
+        {
+          "name": "5.2 Create Student Enquiry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentName\": \"Rohan Mehta\",\n  \"email\": \"rohan.mehta@example.com\",\n  \"phone\": \"+91 99887 76655\",\n  \"targetCountry\": \"United Kingdom\",\n  \"targetDegree\": \"MSc Data Science\",\n  \"branch\": \"bengaluru\",\n  \"stage\": \"new_enquiry\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pipeline",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pipeline"]
+            },
+            "description": "Creates a new student enquiry in the pipeline. Permitted for Counsellor, Branch Manager, and Super Admin."
+          }
+        },
+        {
+          "name": "5.3 Update Pipeline Stage",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stage\": \"counselling\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pipeline/{{studentId}}/stage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pipeline", "{{studentId}}", "stage"]
+            },
+            "description": "Moves a student along pipeline stages. Validates state machine rules and records audit trail in stageHistory."
+          }
+        },
+        {
+          "name": "5.4 Toggle Document Verification",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentsVerified\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/pipeline/{{studentId}}/documents",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "pipeline", "{{studentId}}", "documents"]
+            },
+            "description": "Toggles documentsVerified flag. Accessible to Application Officer, Branch Manager, and Super Admin. (Counsellor and Marketing blocked with 403)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. API Shield & Security Probes",
+      "item": [
+        {
+          "name": "6.1 Malformed JSON Probe (400 INVALID_JSON)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"broken_json\", \"password\": ...}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Sends deliberately corrupted JSON syntax. API Shield catches it and returns friendly 400 response with code INVALID_JSON."
+          }
+        },
+        {
+          "name": "6.2 Unsupported Content-Type Probe (415 UNSUPPORTED_FILE_TYPE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/xml"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<xml><user>hacker</user></xml>",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Sends XML or unsupported content type to mutation route. Rebuffed with HTTP 415 and allowed types enumeration."
+          }
+        },
+        {
+          "name": "6.3 404 Endpoint Probe (404 NOT_FOUND)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/unknown-ghost-endpoint",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "unknown-ghost-endpoint"]
+            },
+            "description": "Attempts to hit a non-existent endpoint. Returns structured 404 with funny vacation/cyberspace message."
+          }
+        }
+      ]
+    }
+  ]
+}

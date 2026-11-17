@@ -1,0 +1,15 @@
+/* ==========================================================================
+   Aeterna One CRM — Master Style Manifest
+   Modular domain stylesheets loaded at top per CSS/PostCSS specification
+   ========================================================================== */
+
+@import './styles/variables.css';
+@import './styles/layout.css';
+@import './styles/components.css';
+@import './styles/dashboard.css';
+@import './styles/auth.css';
+@import './styles/pipeline.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

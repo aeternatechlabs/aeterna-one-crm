@@ -1,0 +1,43 @@
+{
+  "name": "aeterna-one-crm-server",
+  "version": "1.0.0",
+  "description": "Aeterna One CRM Backend API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/scripts/seedUsers.js",
+    "seed:users": "node src/scripts/seedUsers.js",
+    "convert:image": "python src/scripts/convert_to_webp.py",
+    "test": "node --test test/**/*.test.js"
+  },
+  "keywords": [
+    "aeterna",
+    "crm",
+    "nodejs",
+    "express",
+    "mongodb",
+    "mongoose"
+  ],
+  "author": "Sachin Tiwari",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "devil-backend-nodejs": "^4.1.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "hpp": "^0.2.3",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.6.3",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

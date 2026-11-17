@@ -1,0 +1,107 @@
+:root {
+  /* Brand Maroon Palette (Aeterna Heritage Theme) */
+  --color-maroon-950: #380512;
+  --color-maroon-900: #4a0717;
+  --color-maroon-850: #580b1e;
+  --color-maroon-800: #680b22;
+  --color-maroon-700: #7b0e29;
+  --color-maroon-600: #981434;
+  --color-maroon-500: #b51a3f;
+  --color-maroon-100: #fce7ec;
+  --color-maroon-50: #fff1f4;
+
+  /* Brand Imperial Gold Palette */
+  --color-gold-900: #78350f;
+  --color-gold-800: #92400e;
+  --color-gold-700: #b45309;
+  --color-gold-600: #c67d0a;
+  --color-gold-500: #e5a93c;
+  --color-gold-400: #f3c669;
+  --color-gold-300: #fcd34d;
+  --color-gold-200: #fde68a;
+  --color-gold-100: #fef3c7;
+  --color-gold-50: #fffbeb;
+
+  /* Backgrounds & Canvas Surfaces */
+  --color-bg-canvas: #fcf8f3;
+  --color-bg-canvas-subtle: #f8f1e8;
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-elevated: #ffffff;
+  --color-bg-muted: #f4eae0;
+  --color-bg-glass: rgba(255, 255, 255, 0.88);
+  --color-bg-maroon-gradient: linear-gradient(145deg, #420614 0%, #580b1e 40%, #6f0e26 100%);
+  --color-bg-maroon-dark: #380512;
+  --color-bg-gold-gradient: linear-gradient(135deg, #f3c669 0%, #e5a93c 50%, #c67d0a 100%);
+
+  /* Borders & Dividers */
+  --color-border-subtle: #f3e6d8;
+  --color-border-default: #e8d7c4;
+  --color-border-gold: #e5a93c;
+  --color-border-gold-subtle: rgba(229, 169, 60, 0.35);
+  --color-border-maroon: #7b0e29;
+  --color-border-maroon-subtle: rgba(123, 14, 41, 0.2);
+
+  /* Typography / Inks */
+  --color-text-primary: #2d0d15;
+  --color-text-secondary: #6e4c55;
+  --color-text-muted: #8c6e76;
+  --color-text-inverse: #ffffff;
+  --color-text-gold: #c67d0a;
+  --color-text-maroon: #680b22;
+
+  /* Semantic Feedback Colors */
+  --color-success: #15803d;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
+
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+
+  --color-info: #0369a1;
+  --color-info-bg: #f0f9ff;
+  --color-info-border: #bae6fd;
+
+  /* Shadows */
+  --shadow-warm-xs: 0 1px 2px rgba(74, 7, 23, 0.05);
+  --shadow-warm-sm: 0 2px 6px rgba(74, 7, 23, 0.06);
+  --shadow-warm-md: 0 6px 18px rgba(74, 7, 23, 0.08);
+  --shadow-warm-lg: 0 12px 32px rgba(74, 7, 23, 0.12);
+  --shadow-warm-glow: 0 0 24px rgba(229, 169, 60, 0.25);
+
+  /* Legacy variable mappings for backward-compatibility with existing views */
+  --navy: var(--color-maroon-900);
+  --navy-dark: var(--color-maroon-950);
+  --blue: var(--color-maroon-800);
+  --blue-hover: var(--color-maroon-700);
+  --cyan: var(--color-gold-400);
+  --ink: var(--color-text-primary);
+  --muted: var(--color-text-secondary);
+  --muted-light: var(--color-text-muted);
+  --line: var(--color-border-default);
+  --bg: var(--color-bg-canvas);
+  --surface: var(--color-bg-surface);
+  --green: var(--color-success);
+  --amber: var(--color-warning);
+  --red: var(--color-danger);
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4A0B1B" />
+      <stop offset="100%" stop-color="#26040C" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF2A3" />
+      <stop offset="40%" stop-color="#DFB143" />
+      <stop offset="100%" stop-color="#9E7416" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#DFB143" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#DFB143" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <!-- Background Badge -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bgGrad)" stroke="url(#goldGrad)" stroke-width="2" />
+  <circle cx="32" cy="32" r="26" fill="url(#glow)" />
+  <!-- Golden Winged Quill Monogram -->
+  <g fill="url(#goldGrad)" transform="translate(4, 2)">
+    <!-- Main Quill Spine & Nib -->
+    <path d="M42 10 C32 18, 22 30, 18 44 L20 48 L24 46 C28 36, 36 24, 46 14 C48 12, 45 9, 42 10 Z" />
+    <!-- Feather Barbs / Wing Flutes Left -->
+    <path d="M37 17 C28 20, 20 28, 14 38 C18 38, 24 35, 29 29 C31 26, 34 21, 37 17 Z" opacity="0.9" />
+    <path d="M32 23 C25 28, 18 36, 12 45 C16 44, 22 41, 26 35 C28 32, 30 27, 32 23 Z" opacity="0.8" />
+    <!-- Wing Plumage Right / Crown -->
+    <path d="M44 14 C43 20, 39 27, 33 34 C36 33, 41 29, 44 24 C46 20, 46 16, 44 14 Z" opacity="0.9" />
+    <!-- Golden Pen Nib Point -->
+    <polygon points="18,45 16,51 22,49" />
+    <!-- Ink slit in nib -->
+    <line x1="19" y1="47" x2="17" y2="50" stroke="#3A0512" stroke-width="0.8" stroke-linecap="round" />
+  </g>
+</svg>

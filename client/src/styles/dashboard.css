@@ -1,0 +1,479 @@
+/* ==========================================================================
+   Main CRM Dashboard Suite (Maroon & Gold Luxury Heritage Theme)
+   ========================================================================== */
+
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Hero Greeting & Heritage Banner */
+.dashboard-hero-banner {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 20px;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-warm-sm);
+  min-height: 168px;
+}
+
+.hero-left-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  position: relative;
+  z-index: 2;
+  padding: 26px 32px;
+  max-width: 480px;
+  flex-shrink: 0;
+}
+
+.hero-greeting-pill {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-brand-heading {
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  background: var(--color-bg-gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+.hero-brand-sub {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-top: 4px;
+}
+
+.hero-gold-accent-line {
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-gold-500);
+  margin-top: 4px;
+}
+
+.hero-skyline-wrapper {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  top: 0;
+  width: 66%;
+  max-width: 860px;
+  height: 100%;
+  display: none;
+  align-items: flex-end;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.4) 8%, black 22%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.4) 8%, black 22%);
+}
+
+@media (min-width: 850px) {
+  .hero-skyline-wrapper {
+    display: flex;
+  }
+}
+
+.hero-skyline-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: right bottom;
+  display: block;
+}
+
+/* 4-Card Key Metrics Grid */
+.dashboard-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metric-card-theme {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 18px;
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-warm-sm);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.metric-card-theme:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-gold-300);
+  box-shadow: var(--shadow-warm-md);
+}
+
+.metric-icon-badge {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--color-maroon-850);
+  border: 2px solid var(--color-gold-400);
+  color: var(--color-gold-300);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(88, 11, 30, 0.2);
+}
+
+.metric-data-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 2;
+}
+
+.metric-label-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.metric-value-number {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--color-gold-700);
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.metric-trend-pill {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-success);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.metric-card-watermark {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  color: var(--color-gold-500);
+  opacity: 0.28;
+  pointer-events: none;
+  width: 48px;
+  height: 48px;
+}
+
+/* Admissions Pipeline Progress Track */
+.dashboard-pipeline-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 20px;
+  padding: 22px 28px;
+  box-shadow: var(--shadow-warm-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pipeline-card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pipeline-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pipeline-icon-circle {
+  font-size: 18px;
+  color: var(--color-gold-700);
+}
+
+.pipeline-header-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-gold-700);
+}
+
+.pipeline-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-gold-600);
+  text-decoration: none;
+  transition: color 0.15s, transform 0.15s;
+}
+
+.pipeline-link-btn:hover {
+  color: var(--color-maroon-800);
+  transform: translateX(2px);
+}
+
+/* 7 Chevron Stage Ribbon */
+.pipeline-chevrons-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .pipeline-chevrons-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 550px) {
+  .pipeline-chevrons-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.chevron-stage-box {
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 12px;
+  padding: 12px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.chevron-stage-box:hover {
+  border-color: var(--color-gold-400);
+  background: var(--color-gold-50);
+  transform: translateY(-1px);
+}
+
+.chevron-stage-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.chevron-stage-number {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+/* Highlighted 'Enrolled' Final Milestone Block */
+.chevron-stage-enrolled {
+  background: var(--color-maroon-850) !important;
+  border-color: var(--color-maroon-900) !important;
+  box-shadow: 0 4px 14px rgba(88, 11, 30, 0.25);
+}
+
+.chevron-stage-enrolled .chevron-stage-title {
+  color: var(--color-gold-300) !important;
+  font-weight: 800;
+}
+
+.chevron-stage-enrolled .chevron-stage-number {
+  color: var(--color-text-inverse) !important;
+}
+
+/* Bottom Two-Column Grid: Lead Trend + Tasks */
+.dashboard-two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+@media (max-width: 1000px) {
+  .dashboard-two-col-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Lead Trend Area Chart Card */
+.lead-trend-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--shadow-warm-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.trend-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.trend-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-gold-700);
+}
+
+.trend-period-dropdown {
+  background: var(--color-bg-canvas);
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.trend-period-dropdown:focus {
+  border-color: var(--color-gold-500);
+}
+
+.trend-chart-svg-wrap {
+  width: 100%;
+  height: 220px;
+  position: relative;
+}
+
+/* Today's Tasks Card */
+.todays-tasks-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--shadow-warm-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tasks-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tasks-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-gold-700);
+}
+
+.tasks-view-all-link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-gold-600);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.tasks-view-all-link:hover {
+  color: var(--color-maroon-800);
+}
+
+.tasks-checklist-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--color-bg-canvas);
+  border: 1px solid var(--color-border-subtle);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.task-item-row:hover {
+  background: var(--color-gold-50);
+  border-color: var(--color-gold-300);
+}
+
+.task-left-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.task-checkbox-custom {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid var(--color-border-default);
+  cursor: pointer;
+  accent-color: var(--color-maroon-800);
+}
+
+.task-desc-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  transition: all 0.15s;
+}
+
+.task-desc-completed {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.task-time-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}

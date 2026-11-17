@@ -1,0 +1,59 @@
+/* ==========================================================================
+   Aeterna One — Luxury Split-Screen Authentication Suite
+   Custom Animations & Keyframes (Core Layout & Components powered by Tailwind)
+   ========================================================================== */
+
+/* Ambient Radial Glow Lighting Animation */
+@keyframes aeternaAmbient {
+  0% { transform: scale(1); opacity: 0.12; }
+  100% { transform: scale(1.14); opacity: 0.22; }
+}
+
+.animate-ambient {
+  animation: aeternaAmbient 13s ease-in-out infinite alternate;
+}
+
+.animate-ambient-reverse {
+  animation: aeternaAmbient 16s ease-in-out infinite alternate-reverse;
+}
+
+/* Traditional Cloud-Wave Patterns Drift */
+@keyframes cloudDrift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-10px, 8px); }
+}
+
+@keyframes cloudDriftReverse {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(10px, -8px); }
+}
+
+.animate-cloud {
+  animation: cloudDrift 20s ease-in-out infinite alternate;
+}
+
+.animate-cloud-reverse {
+  animation: cloudDriftReverse 23s ease-in-out infinite alternate;
+}
+
+/* Landmark Vidhana Soudha Float */
+@keyframes landmarkFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-landmark {
+  animation: landmarkFloat 8s ease-in-out infinite;
+}
+
+/* Reduced Motion Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .aeterna-login *,
+  .aeterna-login *::before,
+  .aeterna-login *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
