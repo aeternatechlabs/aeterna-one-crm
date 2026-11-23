@@ -1,7 +1,14 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 require('dotenv').config();
 const app = require('./app');
 const { connectDB } = require('./config/db');
 const { validateEnv } = require('./utils/devilWrapper');
+
+// Default PORT to 5000 if not explicitly provided (e.g. Render/Cloud default)
+if (!process.env.PORT) {
+  process.env.PORT = '5000';
+}
 
 // Validate critical environment variables (Fail-Closed)
 const REQUIRED_ENV_VARS = ['PORT', 'MONGO_URI', 'JWT_SECRET'];
