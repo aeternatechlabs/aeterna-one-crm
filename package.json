@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Aeterna One CRM - Production MERN Stack Architecture",
   "scripts": {
+    "build": "npm --prefix client run build",
     "server": "npm --prefix server run dev",
     "client": "npm --prefix client run dev",
     "start:server": "npm --prefix server start",
