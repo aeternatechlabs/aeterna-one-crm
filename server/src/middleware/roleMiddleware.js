@@ -1,4 +1,5 @@
 const { ApiError } = require('../utils/devilWrapper');
+const { requirePermission, hasPermission } = require('../config/roles');
 
 /**
  * Role-Based Access Control Middleware
@@ -29,4 +30,4 @@ const requireRole = (...roles) => {
   };
 };
 
-module.exports = { requireRole };
+module.exports = { requireRole, requirePermission, hasPermission };

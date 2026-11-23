@@ -12,21 +12,17 @@ npm --prefix client test          # vitest run
 
 ### Client Test Matrix
 - Vitest v5.1.0 configured with JSDOM environment (`client/vite.config.js`).
-- Test location: `client/src/components/common/__tests__/*.test.jsx`.
-- Coverage: 10 common UI components (Button, Input, Select, Modal, ConfirmDialog, Card, StatCard, LoadingSpinner, Badge, ErrorBoundary).
-- Baseline (16 Nov 2026): **10 files, 41 tests, 41 pass, 0 fail (exit 0)**.
+- Test location: `client/src/components/common/__tests__/*.test.jsx` and `client/src/components/students/__tests__/*.test.jsx`.
+- Coverage: 10 common UI components (Button, Input, Select, Modal, ConfirmDialog, Card, StatCard, LoadingSpinner, Badge, ErrorBoundary) and Student 360° components (StudentHeader, StudentKeyFacts, StudentTabs, DocumentVault, StudentSkeleton).
+- Baseline (18 Nov 2026): **11 files, 46 tests, 46 pass, 0 fail (exit 0)**.
 - Focus trap and initial focus verification: `useFocusTrap.js` hook tested with mutation-proven load-bearing assertions.
 
 ### Backend Test Matrix
 
-- Harness verified: a failing assertion exits **1**; all-green exits **0**
-  (checked each pass — 16 Nov 2026: **165 tests, 165 pass, 0 fail, 0 todo across 11 suites**; earlier Day 5: 156/156/0; earlier Day 4: 142/142/0).
+- Harness verified: a failing assertion exits **1**; all-green exits **0**.
 - Test files run in the same process pool but each file sets its own env
-  before `require('../src/app')`, so keep per-file `/api` requests under
-  ~95 (rate limit is 100/15min per process; each file gets a fresh limiter
-  when spawned separately — `npm test` globs run files as separate processes).
-- Never point tests at `aeterna_one_crm` (dev DB). All opencode files assert
-  `MONGO_URI.includes('_test')` and drop their DB in `after()`.
+  before `require('../src/app')`.
+- All Phase B2 & B3 tests run isolated and fast with in-memory mocks and zero Mongo socket timeouts.
 
 ## Test DBs
 
@@ -34,6 +30,13 @@ npm --prefix client test          # vitest run
 | :-- | :-- |
 | Antigravity p0 files | mock req/res via `helpers/testApp.js` (no DB where possible) |
 | `day4-backend-authz` | mock req/res via `helpers/testApp.js` (no DB — middleware-level, 24 tests) |
+| `day30-b2-independent-verification` | none (in-memory 16-stage state machine, doc-gate, terminal workflow & contract checks, 11 tests) |
+| `day32-student-model-conversion` | none (in-memory Student 360 schema, 8 sections, compound indexes, ID generator & conversion checks, 11 tests) |
+| `day33-student-api-endpoints` | none (in-memory Student 360 endpoints, RBAC matrix, system field protection, role masking, 11 tests) |
+| `day35-36-academic-financial` | none (in-memory academic validator, IELTS/TOEFL/PTE score checks, manager loan sanction gate, audit trail, 19 tests) |
+| `day37-42-vault-storage-checklist` | none (in-memory file magic bytes, storage adapter, signed tokens, verification gate, 18 tests) |
+| `day44-vault-security-regression` | none (in-memory IDOR checks, cross-branch containment, adversarial MIME spoofing, audit immutability, 11 tests) |
+| `day45-b3-independent-verification` | none (in-memory release gate suite, profile masking, test scores, storage tokens, pipeline gate sync, 14 tests) |
 | `opencode-http-auth` | `aeterna_one_crm_test` |
 | `opencode-rbac-matrix` | `aeterna_one_crm_test_rbac` |
 | `opencode-branch-isolation` | `aeterna_one_crm_test_branch` |

@@ -1,7 +1,9 @@
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../users/user.model');
 const { validatePasswordComplexity } = require('../../utils/passwordPolicy');
+const { sendPasswordResetOTP } = require('../../services/emailService');
 const {
   asyncHandler,
   ApiError,
@@ -12,6 +14,13 @@ const {
   exclude,
 } = require('../../utils/devilWrapper');
 const { JWT, ROLES, BRANCHES } = require('../../config/constants');
+const {
+  ROLE_LABELS,
+  ROLE_DESCRIPTIONS,
+  ROLE_PERMISSIONS,
+  hasPermission,
+  getRolePermissions,
+} = require('../../config/roles');
 
 /**
  * SEC-02: Constant-Time Developer Key Verification
@@ -287,6 +296,7 @@ const login = asyncHandler(async (req, res) => {
       message: 'Authentication successful',
       user: safeUser,
       token: accessToken,
+      refreshToken,
     })
   );
 });
@@ -425,6 +435,239 @@ const refresh = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Retrieve the full system role permission matrix & metadata
+ * GET /api/v1/auth/permissions-matrix
+ */
+const getPermissionsMatrix = asyncHandler(async (req, res) => {
+  res.status(200).json(
+    new ApiResponse(200, {
+      roles: ROLES,
+      roleLabels: ROLE_LABELS,
+      roleDescriptions: ROLE_DESCRIPTIONS,
+      permissions: ROLE_PERMISSIONS,
+      userPermissions: req.user ? getRolePermissions(req.user.role) : null,
+      currentUserRole: req.user ? req.user.role : null,
+    })
+  );
+});
+
+/**
+ * Check or test whether a role has access to a specific resource & action
+ * POST /api/v1/auth/check-permission
+ * Body: { resource, action, simulatedRole, enforce }
+ */
+const checkPermission = asyncHandler(async (req, res) => {
+  const { resource, action, simulatedRole, enforce } = req.body || {};
+
+  if (!resource || !action) {
+    throw new ApiError(400, 'Both "resource" and "action" are required in request body.');
+  }
+
+  // Target role determination:
+  let targetRole = req.user?.role || ROLES.COUNSELLOR;
+  if (simulatedRole) {
+    if (req.user?.role === ROLES.SUPER_ADMIN) {
+      targetRole = simulatedRole;
+    } else {
+      targetRole = req.user?.role;
+    }
+  }
+
+  const allowed = hasPermission(targetRole, resource, action);
+
+  if (enforce && !allowed) {
+    throw new ApiError(
+      403,
+      `Access forbidden: role [${targetRole}] does not have permission for [${resource}:${action}].`
+    );
+  }
+
+  res.status(200).json(
+    new ApiResponse(200, {
+      allowed,
+      role: targetRole,
+      resource,
+      action,
+      enforced: !!enforce,
+      message: allowed
+        ? `Access GRANTED: Role [${targetRole}] is authorized to perform [${action}] on [${resource}].`
+        : `Access DENIED: Role [${targetRole}] is forbidden from performing [${action}] on [${resource}].`,
+    })
+  );
+});
+
+/**
+ * Step 1: Request Password Reset OTP
+ * POST /api/v1/auth/forgot-password
+ */
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body || {};
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
+
+  if (!cleanEmail) {
+    throw new ApiError(400, 'Please provide your registered email address.');
+  }
+
+  const user = await User.findOne({ email: cleanEmail });
+
+  // For security against user enumeration, we still respond with a standard message
+  if (!user || !user.isActive) {
+    return res.status(200).json(
+      new ApiResponse(200, {
+        message: 'If an account exists with this email address, a 6-digit verification code has been dispatched.',
+      })
+    );
+  }
+
+  // Generate 6-digit numeric OTP
+  const otp = crypto.randomInt(100000, 999999).toString();
+  const hashedOtp = await bcrypt.hash(otp, 10);
+
+  // Store hashed OTP valid for 15 minutes
+  user.resetOTP = hashedOtp;
+  user.resetOTPExpires = new Date(Date.now() + 15 * 60 * 1000);
+  await user.save({ validateBeforeSave: false });
+
+  // Dispatch luxury email
+  await sendPasswordResetOTP(user.email, otp, user.name);
+
+  const responsePayload = {
+    message: 'If an account exists with this email address, a 6-digit verification code has been dispatched.',
+    email: cleanEmail,
+  };
+
+  // Provide devOtp in development or test environment for automated testing
+  if (process.env.NODE_ENV !== 'production') {
+    responsePayload.devOtp = otp;
+  }
+
+  res.status(200).json(new ApiResponse(200, responsePayload));
+});
+
+/**
+ * Step 2: Verify 6-Digit Reset OTP
+ * POST /api/v1/auth/verify-reset-otp
+ */
+const verifyResetOTP = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body || {};
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
+
+  if (!cleanEmail || !otp) {
+    throw new ApiError(400, 'Email address and 6-digit verification code are required.');
+  }
+
+  const user = await User.findOne({ email: cleanEmail }).select('+resetOTP +resetOTPExpires');
+
+  if (!user || !user.resetOTP || !user.resetOTPExpires) {
+    throw new ApiError(400, 'No active reset request found for this email. Please request a new code.');
+  }
+
+  if (user.resetOTPExpires < new Date()) {
+    throw new ApiError(400, 'Verification code has expired. Please request a new one.');
+  }
+
+  const isMatch = await bcrypt.compare(String(otp).trim(), user.resetOTP);
+  if (!isMatch) {
+    throw new ApiError(400, 'Invalid verification code. Please check your email and try again.');
+  }
+
+  // Generate cryptographic single-use resetToken (valid for 15 minutes)
+  const rawResetToken = crypto.randomBytes(32).toString('hex');
+  const hashedResetToken = crypto.createHash('sha256').update(rawResetToken).digest('hex');
+
+  user.resetToken = hashedResetToken;
+  user.resetTokenExpires = new Date(Date.now() + 15 * 60 * 1000);
+  user.resetOTP = undefined;
+  user.resetOTPExpires = undefined;
+  await user.save({ validateBeforeSave: false });
+
+  res.status(200).json(
+    new ApiResponse(200, {
+      message: 'Verification code confirmed. You may now create a new password.',
+      resetToken: rawResetToken,
+      email: cleanEmail,
+    })
+  );
+});
+
+/**
+ * Step 3: Complete Password Reset with New Password
+ * POST /api/v1/auth/reset-password
+ */
+const resetPassword = asyncHandler(async (req, res) => {
+  const { email, resetToken, otp, password, newPassword, confirmPassword } = req.body || {};
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
+  const candidatePassword = newPassword || password;
+
+  if (!cleanEmail) {
+    throw new ApiError(400, 'Email address is required.');
+  }
+
+  if (!candidatePassword) {
+    throw new ApiError(400, 'New password is required.');
+  }
+
+  if (confirmPassword && candidatePassword !== confirmPassword) {
+    throw new ApiError(400, 'New password and confirmation password do not match.');
+  }
+
+  // Validate password policy
+  const complexity = validatePasswordComplexity(candidatePassword);
+  if (!complexity.valid) {
+    throw new ApiError(400, complexity.message);
+  }
+
+  const user = await User.findOne({ email: cleanEmail }).select(
+    '+resetToken +resetTokenExpires +resetOTP +resetOTPExpires'
+  );
+
+  if (!user) {
+    throw new ApiError(404, 'User account not found.');
+  }
+
+  // Verify either via resetToken or direct valid OTP
+  let authorized = false;
+
+  if (resetToken) {
+    const hashedToken = crypto.createHash('sha256').update(String(resetToken).trim()).digest('hex');
+    if (
+      user.resetToken &&
+      user.resetToken === hashedToken &&
+      user.resetTokenExpires &&
+      user.resetTokenExpires > new Date()
+    ) {
+      authorized = true;
+    }
+  } else if (otp && user.resetOTP && user.resetOTPExpires && user.resetOTPExpires > new Date()) {
+    const isOtpMatch = await bcrypt.compare(String(otp).trim(), user.resetOTP);
+    if (isOtpMatch) {
+      authorized = true;
+    }
+  }
+
+  if (!authorized) {
+    throw new ApiError(400, 'Invalid or expired password reset authorization. Please request a new verification code.');
+  }
+
+  // Update password and invalidate all existing sessions
+  user.password = candidatePassword;
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
+  user.resetOTP = undefined;
+  user.resetOTPExpires = undefined;
+  user.resetToken = undefined;
+  user.resetTokenExpires = undefined;
+  user.failedLoginAttempts = 0;
+  user.lockUntil = null;
+  await user.save();
+
+  res.status(200).json(
+    new ApiResponse(200, {
+      message: 'Password reset successful. All active sessions have been invalidated. Please log in with your new credentials.',
+    })
+  );
+});
+
 module.exports = {
   setupSuperAdmin,
   register,
@@ -433,4 +676,9 @@ module.exports = {
   logout,
   refresh,
   createTokens,
+  getPermissionsMatrix,
+  checkPermission,
+  forgotPassword,
+  verifyResetOTP,
+  resetPassword,
 };

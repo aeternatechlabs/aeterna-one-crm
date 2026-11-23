@@ -4,6 +4,8 @@ const {
   updateStage,
   toggleDocumentsVerified,
   createStudent,
+  getDashboardSummary,
+  globalSearch,
 } = require('./pipeline.controller');
 const { protect } = require('../../middleware/authMiddleware');
 const { requireRole } = require('../../middleware/roleMiddleware');
@@ -17,7 +19,33 @@ router.use(pipelineLimiter);
 router.use(protect);
 router.use(requireBranchAccess());
 
-// 1. View Pipeline: super_admin, branch_manager, counsellor, application_officer (marketing excluded)
+// 1. Dashboard Summary: All authenticated staff roles
+router.get(
+  '/dashboard-summary',
+  requireRole(
+    ROLES.SUPER_ADMIN,
+    ROLES.BRANCH_MANAGER,
+    ROLES.COUNSELLOR,
+    ROLES.APPLICATION_OFFICER,
+    ROLES.MARKETING
+  ),
+  getDashboardSummary
+);
+
+// 2. Global Search: All authenticated staff roles
+router.get(
+  '/global-search',
+  requireRole(
+    ROLES.SUPER_ADMIN,
+    ROLES.BRANCH_MANAGER,
+    ROLES.COUNSELLOR,
+    ROLES.APPLICATION_OFFICER,
+    ROLES.MARKETING
+  ),
+  globalSearch
+);
+
+// 3. View Pipeline: super_admin, branch_manager, counsellor, application_officer (marketing excluded)
 router.get(
   '/',
   requireRole(ROLES.SUPER_ADMIN, ROLES.BRANCH_MANAGER, ROLES.COUNSELLOR, ROLES.APPLICATION_OFFICER),

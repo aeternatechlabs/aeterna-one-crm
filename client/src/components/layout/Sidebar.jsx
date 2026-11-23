@@ -8,6 +8,9 @@ import {
   CheckSquare,
   BarChart3,
   Settings,
+  Users,
+  Trash2,
+  School,
   X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -23,6 +26,9 @@ const NAV_ICON_MAP = {
   CheckSquare,
   BarChart3,
   Settings,
+  Users,
+  Trash2,
+  School,
 };
 
 export const Sidebar = ({ isOpen = false, onClose }) => {
@@ -80,6 +86,7 @@ export const Sidebar = ({ isOpen = false, onClose }) => {
             <NavLink
               key={item.path}
               to={item.path}
+              end={Boolean(item.end ?? (item.path === '/employees' || item.path === '/'))}
               onClick={handleLinkClick}
               className={({ isActive }) =>
                 `nav-link ${isActive ? 'nav-link-active' : ''}`

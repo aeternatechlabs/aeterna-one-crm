@@ -6,7 +6,7 @@
 const devil = require('devil-backend-nodejs');
 
 // Primary utilities
-const asyncHandler = devil.asyncHandler;
+const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const ApiError = devil.ApiError;
 const ApiResponse = devil.ApiResponse;
 

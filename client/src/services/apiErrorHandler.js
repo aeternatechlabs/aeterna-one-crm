@@ -18,7 +18,14 @@ export async function handleApiCall(method, url, data = null, options = {}) {
   try {
     let response;
     if (['post', 'put', 'patch'].includes(lowerMethod)) {
-      response = await api[lowerMethod](url, data, axiosConfig);
+      const payload = data !== null && data !== undefined ? data : {};
+      response = await api[lowerMethod](url, payload, axiosConfig);
+    } else if (lowerMethod === 'delete') {
+      const config = { ...axiosConfig };
+      if (data) {
+        config.data = data;
+      }
+      response = await api.delete(url, config);
     } else {
       const config = data ? { ...axiosConfig, params: data } : axiosConfig;
       response = await api[lowerMethod](url, config);

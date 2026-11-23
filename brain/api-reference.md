@@ -32,8 +32,43 @@ Chain order: 🔒 → branch → roles → controller.
 | :-- | :-- | :-- |
 | `GET /pipeline` | super_admin, branch_manager, counsellor, application_officer | Filters `branch`, `stage`, `search` (escaped + validated → 400 — F-08 fixed), `page`, `limit`, `fields` (allowlisted — F-06/F-06R fixed); default excludes `stageHistory`, `__v` |
 | `POST /pipeline` | super_admin, branch_manager, counsellor | Requires `studentName`, `email`, `programme`, `destination`; restricted forced own branch (403 on cross); super w/o body branch → 400 enum quirk |
-| `PATCH /pipeline/:id/stage` | super_admin, branch_manager, counsellor | Body `{toStage, reason?, simulateError?}`; header `x-simulate-validation-error`; docs-gate, lost-reason ≥5, record-branch 403, 404/400; appends `stageHistory` |
+| `PATCH /pipeline/:id/stage` | super_admin, branch_manager, counsellor | Body `{stage, reason?, expectedStage?, simulateError?, deferredIntake?}`; header `x-simulate-validation-error`; 16-stage state machine matrix check; docs-gate requires `documentsVerified:true` for submission; exit stages (`lost`/`deferred`) require reason ≥ 5 chars; reopening `lost`/`deferred` restricted to super_admin and branch_manager (counsellor 403); optimistic concurrency returns 409 Conflict on stage mismatch; record-branch 403; appends `stageHistory` |
 | `PATCH /pipeline/:id/documents` | super_admin, branch_manager, application_officer | Body `{documentsVerified}` optional (toggle if absent); 404 + record-branch guard; counsellor → 403 |
+
+## Students — `modules/students/student.routes.js`
+
+Chain order: 🔒 → branch → roles → controller.
+
+| Method & Path | Roles | Notes |
+| :-- | :-- | :-- |
+| `GET /students` | super_admin, branch_manager, counsellor, application_officer | Paginated, branch-scoped student directory. Query: `page`, `limit` (max 100), `search` (escaped regex), `branch`, `status`, `fields` (allowlist validated → 400 on illegal fields). Excludes soft-deleted (`isDeleted: false`). Role-based masking applied. |
+| `GET /students/:id` | super_admin, branch_manager, counsellor, application_officer | Full Student 360° profile. Record-level branch containment guard (403 on foreign branch). Counsellor role receives masked passport (`****1234`) and sanitized sponsor income. |
+| `POST /students` | super_admin, branch_manager, counsellor | Direct student profile creation. Auto-generates unique `studentId` (`AET-BLR-2026-XXXX`). Restricted staff forced to own branch (403 on foreign branch). System-managed fields strictly rejected (400). Duplicate email within branch rejected (409). |
+| `PATCH /students/:id` | super_admin, branch_manager, counsellor | Update profile sections (`identity`, `academics`, `testScores`, `financial`, `preferences`, `shortlist`, `applications`). System-managed fields (`studentId`, `branch`, `conversionSource`) strictly rejected with 400. Administrative fields (`status`, staff assignment) restricted to Manager/Super (counsellor 403). Foreign branch record returns 403. |
+| `POST /students/:id/notes` | super_admin, branch_manager, counsellor | Add internal note to timeline. Body: `{content, category?}`. Branch-scoped (403 on foreign). Captures author ID and name. |
+| `POST /students/convert-lead` | super_admin, branch_manager, counsellor | Convert pipeline lead into Student 360° record via conversion engine. Preserves immutable source attribution, updates source lead with backlink and stage history audit, rejects duplicate conversions (409). |
+| `POST /students/:id/academics` | super_admin, branch_manager, counsellor | Add qualification record (10th, 12th, Bachelor's, GPA, backlogs). Validated against academic standards (`academicValidation.js`). Audit event `ACADEMIC_RECORD_ADDED`. |
+| `POST /students/:id/test-scores` | super_admin, branch_manager, counsellor | Add standardized test score (IELTS, TOEFL, PTE, Duolingo, GRE, GMAT). Rigorous score range & chronological date validation. Audit event `TEST_SCORE_ADDED`. |
+| `PATCH /students/:id/test-scores/:scoreId/verify` | super_admin, branch_manager, application_officer | Verify standardized test score & TRF number. Counsellor strictly 403. Audit event `TEST_SCORE_VERIFIED`. |
+| `PATCH /students/:id/financial` | super_admin, branch_manager, counsellor | Update budget, currency, funding sources, loan status, sponsor details, visa refusal disclosure. Currency validated. Loan sanction/disbursal gate restricted to Manager/Admin (counsellor 403). Audit events `FINANCIAL_BUDGET_UPDATED`, `LOAN_SANCTION_UPDATED`, `VISA_REFUSAL_UPDATED`. |
+| `PATCH /students/:id/preferences` | super_admin, branch_manager, counsellor | Update destination countries, degree levels, study fields, target intake. Audit event `PREFERENCES_UPDATED`. |
+| `POST /students/:id/applications` | super_admin, branch_manager, counsellor, application_officer | Add multi-university target application record (Day 43). Tracks university, programme, country, portal ID, submission date, status. |
+| `PATCH /students/:id/applications/:appId` | super_admin, branch_manager, application_officer | Update application status, conditional/unconditional offers, CAS/I-20 identifiers, and visa progress (Day 43). |
+
+## Document Vault & Storage — `modules/vault/vault.routes.js`
+
+Chain order: 🔒 → branch → roles → controller. Mounted at `/api/v1/students/:id/vault/*` and `/api/v1/vault-storage/*`.
+
+| Method & Path | Roles | Notes |
+| :-- | :-- | :-- |
+| `POST /students/:id/vault/upload-intent` | super_admin, branch_manager, counsellor, application_officer | Generate short-lived signed upload token (15m TTL). Validates file metadata allowlists (PDF, JPEG, PNG, WEBP, max 10MB). Audit event `DOCUMENT_UPLOAD_INTENT`. |
+| `POST /students/:id/vault/upload` | super_admin, branch_manager, counsellor, application_officer | Secure upload proxy with binary magic byte signature verification (`verifyFileMagicBytes`), path traversal prevention, and private bucket keying (`vault/{branch}/{studentId}/{category}/{prefix}_{name}`). Audit event `DOCUMENT_UPLOADED`. |
+| `GET /students/:id/vault` | super_admin, branch_manager, counsellor, application_officer | List student vault documents with checklist status. Computes `isChecklistComplete` for mandatory categories (`passport_identity`, `academic_transcripts`, `financial_affidavits`). |
+| `GET /students/:id/vault/:docId/download` | super_admin, branch_manager, counsellor, application_officer | Generates HMAC-SHA256 signed download URL with 15-minute TTL and `Content-Disposition: attachment`. Audit event `DOCUMENT_DOWNLOAD_REQUESTED`. |
+| `GET /students/:id/vault/:docId/preview` | super_admin, branch_manager, counsellor, application_officer | Generates HMAC-SHA256 signed preview URL with 15-minute TTL and scoped `Content-Disposition: inline`. Audit event `DOCUMENT_PREVIEW_REQUESTED`. |
+| `PATCH /students/:id/vault/:docId/verify` | super_admin, branch_manager, application_officer | Verification gate. Counsellor and marketing strictly 403. Automatically synchronizes pipeline submission stage gate (`PipelineStudent.documentsVerified`). Audit event `DOCUMENT_VERIFIED` / `DOCUMENT_VERIFICATION_REJECTED`. |
+| `DELETE /students/:id/vault/:docId` | super_admin, branch_manager | Document soft-delete lifecycle. Application officer and counsellor strictly 403. Re-evaluates pipeline documents gate. Audit event `DOCUMENT_SOFT_DELETED`. |
+| `GET /vault-storage/file` | 🔓 (Signed Token Auth) | Constant-time HMAC-SHA256 signed token verification with expiry validation. Serves binary with strict `nosniff`, `Cache-Control: private, no-store`, and sanitized `Content-Disposition`. |
 
 ## Health — `modules/health/health.routes.js`
 

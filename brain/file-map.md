@@ -12,6 +12,8 @@
 | `docs/ROLE_PERMISSION_MATRIX.md` | Day 4 deliverable: 5-role permission matrix, endpoint comparison & branch tamper defense |
 | `docs/COMPONENT_INVENTORY.md` | Day 4 deliverable: inventory of 10 common UI components with props, design tokens & ARIA behavior |
 | `docs/PHASE_A_VERIFICATION_REPORT.md` | Day 5 deliverable: Phase A verification report, known-issues list & prioritized Phase B backlog |
+| `docs/PHASE_B3_VERIFICATION_REPORT.md` | Day 45 deliverable: Phase B3 verification report, data classification, storage threat model, verification gate & test results |
+| `docs/STUDENT_360_DATA_CLASSIFICATION_AND_REQUIREMENTS.md` | Day 31 deliverable: 8-section Student 360° profile specification, 4-tier data sensitivity classification (DPDP/GDPR/FERPA), RBAC matrix & retention lifecycle |
 | `package.json` | Root scripts: `dev:server`, `dev:client`, `build:client` |
 | `brain/` | This knowledge base |
 
@@ -38,8 +40,21 @@
 | `src/modules/users/user.controller.js` | Paginated list w/ search/role/branch + (dead) fields allowlist |
 | `src/modules/users/user.model.js` | User schema; `password select:false`; bcrypt pre-save; role/branch enums |
 | `src/modules/pipeline/pipeline.routes.js` | 4 routes: role matrix per api-reference.md |
-| `src/modules/pipeline/pipeline.controller.js` | getPipeline, updateStage (business rules + stageHistory), toggleDocumentsVerified, createStudent |
-| `src/modules/pipeline/pipeline.model.js` | PipelineStudent; branch enum (no `all`); stage enum; stageHistory subdocs; `{branch,stage}` index |
+| `src/modules/pipeline/pipeline.controller.js` | getPipeline, updateStage (16-stage state machine + atomic concurrency filter + stageHistory), toggleDocumentsVerified, createStudent |
+| `src/modules/pipeline/pipeline.model.js` | PipelineStudent; 16-stage schema enum + legacy aliases; branch enum (no `all`); stageHistory subdocs; text search index; lead-to-student links |
+| `src/modules/pipeline/pipelineStateMachine.js` | 16-stage admissions state machine, transition validation matrix, document checklist gate, mandatory exit reason check, and reopening permissions |
+| `src/modules/students/student.model.js` | Student 360° Mongoose model; 8 core sections, DPDP/GDPR soft-delete lifecycle, compound indexes, text search |
+| `src/modules/students/student.routes.js` | Student 360° routes (list, getById, create, update, addNote, convertLead, academics, test-scores, financial, preferences, applications); branch-scoped & RBAC guarded |
+| `src/modules/students/student.controller.js` | Student 360° controller; projection allowlists, system-managed field guards, role-based masking (counsellor passport & finance), academic/test score engine, loan status gates |
+| `src/modules/students/studentConversion.service.js` | Lead conversion engine; human-readable Student ID generator, immutable source attribution, duplicate prevention, branch isolation |
+| `src/modules/students/academicValidation.js` | Standardized test score (IELTS, TOEFL, PTE, Duolingo, GRE, GMAT) and qualification validation engine |
+| `src/modules/students/studentAudit.model.js` | Immutable audit trail for academic, financial, loan status, and preference modifications |
+| `src/modules/vault/fileValidation.js` | Document MIME type & magic byte signature verification (PDF, JPEG, PNG, WEBP), 10MB limit, path traversal sanitization |
+| `src/modules/vault/storage.service.js` | Cloudflare R2 / AWS S3 storage adapter with sandboxed local disk driver and HMAC-SHA256 signed download/upload token generator |
+| `src/modules/vault/document.model.js` | Document Vault Mongoose model; checklist metadata, verification status, verifier attribution, retention lifecycle |
+| `src/modules/vault/documentAudit.model.js` | Immutable audit trail for document upload intent, upload, download, verification, and soft-delete lifecycle events |
+| `src/modules/vault/vault.controller.js` | Document vault controller; upload intent, magic byte check, checklist compilation, signed download/preview tokens, verification gate, soft-delete |
+| `src/modules/vault/vault.routes.js` | Vault router mounted under `/api/v1/students/:id/vault` with strict branch and role authorization |
 | `src/modules/health/health.routes.js` + `health.controller.js` | Health JSON (status hardcoded healthy — F-03) |
 | `src/utils/devilWrapper.js` | Re-export facade over devil-backend-nodejs (ApiResponse, ApiError, asyncHandler, generateTokens, paginate) |
 | `src/scripts/seedUsers.js` | `npm run seed:users` — creates 5 demo staff (incl. super `branch:'all'`) |
@@ -56,6 +71,13 @@
 | `p0-sec-001.authz.test.js` | Antigravity: register RBAC (19 total P0 tests green) |
 | `p0-sec-002.pipeline-authz.test.js` | Antigravity: pipeline RBAC + branch records |
 | `p0-sec-003.config-demo.test.js` | Antigravity: fail-closed config, no demo seeding |
+| `day30-b2-independent-verification.test.js` | Day 30: B2 16-stage state machine, document gate, terminal states, RBAC & client parity (11/11 tests green) |
+| `day32-student-model-conversion.test.js` | Day 32: Student 360° model, 8 sections, compound indexes, ID generator, lead conversion & duplicate prevention (11/11 tests green) |
+| `day33-student-api-endpoints.test.js` | Day 33: Student 360° APIs (list, getById, create, update, notes), RBAC matrix, system field protection, role masking (11/11 tests green) |
+| `day35-36-academic-financial.test.js` | Day 35 & 36: Academic history, test score engine (IELTS/TOEFL/PTE/GRE/GMAT), financial audit & manager loan sanction gate (19/19 tests green) |
+| `day37-42-vault-storage-checklist.test.js` | Day 37–42: Document Vault, storage adapter, magic byte validation, signed download/preview tokens, verification gate & soft-delete lifecycle (18/18 tests green) |
+| `day44-vault-security-regression.test.js` | Day 43 & 44: Applications integration, IDOR defense, cross-branch containment, adversarial MIME spoofing & audit immutability (11/11 tests green) |
+| `day45-b3-independent-verification.test.js` | Day 45: Phase B3 independent verification & release gate suite (14/14 tests green) |
 | `opencode-http-auth.test.js` | OpenCode: login/JWT/register/refresh HTTP (26) |
 | `opencode-rbac-matrix.test.js` | OpenCode: 5 roles × endpoints (6) |
 | `opencode-branch-isolation.test.js` | OpenCode: scope + record guards + latent quirk (15) |
@@ -80,6 +102,8 @@
 | `src/components/common/__tests__/*` | Client accessibility & keyboard test suite (10 files, 41 tests, Vitest + JSDOM) |
 | `src/components/layout/*` | AppLayout (mobile drawer), Sidebar (role-filtered NAV), Header (Ctrl+K, branch pill, avatar menu) |
 | `src/components/pipeline/*` | PipelineColumn, PipelineCard (role/branch-disabled actions), NewStudentModal, ReasonModal |
+| `src/components/students/*` | StudentHeader, StudentKeyFacts, StudentTabs, DocumentVault (compliance checklist & verification badges), AddNoteModal, StudentSkeleton |
+| `src/components/students/__tests__/*` | Student 360° UI component accessibility, tab switching, DocumentVault verification RBAC, and role masking tests (Vitest) |
 | `src/context/AuthContext.jsx` + `useAuth.js` | `/me` boot, login/logout, `localStorage` **profile only (`aeterna_user`) — no token (F-02 fixed)** |
 | `src/context/PermissionContext.jsx` + `usePermissions.js` | `hasPermission` exposure |
 | `src/config/constants.js` | ROLES/BRANCHES/PIPELINE_STAGES mirrors, NAV_ITEMS, **DEMO_CREDENTIALS (F-09, DEV-gated)** |
@@ -87,11 +111,13 @@
 | `src/services/api.js` | Axios instance: baseURL `/api/v1`, `withCredentials`, **no auth header (cookie-only, F-02)**; 401 → `POST /auth/refresh` → retry, else clear `aeterna_user` |
 | `src/services/apiErrorHandler.js` + `errorMessages.js` | Centralized error mapping (Rule 17) |
 | `src/services/auth.service.js` / `pipeline.service.js` | API wrappers |
+| `src/services/student.service.js` | Student 360° API client wrapper (list, getById, create, update, addNote, convertLead) |
 | `src/hooks/usePipelineQueries.js` | PIPELINE_KEYS factory + query hook |
 | `src/hooks/usePipelineMutations.js` | optimisticWithRevert stage/docs/create mutations |
+| `src/hooks/useStudentQueries.js` | STUDENT_KEYS factory + useStudents, useStudent, useUpdateStudent, useAddStudentNote |
 | `src/utils/optimistic.js` | Shared optimistic helper (Rule 13) |
-| `src/pages/*` | LoginPage (premium split-screen redesign; dev-gated quick login `section.login-dev-section`), DashboardPage, PipelinePage, Unauthorized, NotFound |
-| `src/styles/*` | variables/layout/components/dashboard/auth/pipeline CSS — brand tokens, zero hardcoded component colors; `auth.css` = login keyframes, gold focus ring, breakpoints 640/1023/1024/1280, reduced-motion |
+| `src/pages/*` | LoginPage (premium split-screen redesign; dev-gated quick login `section.login-dev-section`), DashboardPage, PipelinePage, Student360Page (directory & full profile view), Unauthorized, NotFound |
+| `src/styles/*` | variables/layout/components/dashboard/auth/pipeline/students CSS — brand tokens, zero hardcoded component colors; `auth.css` = login keyframes; `students.css` = responsive 360 layout, tabs, shimmer |
 | `src/assets/*` | Brand images (brand/heritage/modules/showcase); `heritage/vidhana-soudha.webp` = login hero watermark |
 
 ## devil package internals (read-only reference)

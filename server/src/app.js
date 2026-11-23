@@ -33,14 +33,18 @@ app.use(helmet());
 app.use(hpp());
 
 // 3. CORS configuration
+const envOrigins = [process.env.CLIENT_URL, process.env.FRONTEND_URL]
+  .filter(Boolean)
+  .flatMap((url) => url.split(',').map((u) => u.trim()))
+  .filter(Boolean);
+
 const allowedOrigins = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  process.env.CLIENT_URL,
-  process.env.FRONTEND_URL,
-].filter(Boolean);
+  ...envOrigins,
+];
 
 app.use(
   cors({
@@ -49,7 +53,8 @@ app.use(
       if (!origin) return callback(null, true);
       const isAllowed =
         allowedOrigins.indexOf(origin) !== -1 ||
-        (process.env.CORS_ALLOW_ALL_DEV === 'true' && process.env.NODE_ENV === 'development');
+        (process.env.CORS_ALLOW_ALL_DEV === 'true' && process.env.NODE_ENV === 'development') ||
+        (origin.endsWith('.vercel.app') && process.env.ALLOW_VERCEL_PREVIEWS !== 'false');
 
       if (isAllowed) {
         callback(null, true);
@@ -67,7 +72,7 @@ app.use(
 // 4. General Parsers, Payload Shield & Compression
 app.use(compression());
 app.use(validateContentType);
-app.use(express.json({ limit: SHIELD_CONFIG.PAYLOAD.JSON_LIMIT }));
+app.use(express.json({ limit: SHIELD_CONFIG.PAYLOAD.JSON_LIMIT, strict: false }));
 app.use(express.urlencoded({ extended: true, limit: SHIELD_CONFIG.PAYLOAD.URLENCODED_LIMIT }));
 app.use(handleParserErrors);
 app.use(cookieParser());

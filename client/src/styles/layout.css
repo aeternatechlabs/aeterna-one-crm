@@ -350,6 +350,14 @@
   color: var(--color-text-muted);
 }
 
+.header-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
 .header-search-input {
   border: none;
   background: transparent;
@@ -358,6 +366,7 @@
   color: var(--color-text-primary);
   width: 100%;
   font-family: inherit;
+  caret-color: transparent;
 }
 
 .header-search-input::placeholder {

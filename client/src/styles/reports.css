@@ -1,0 +1,413 @@
+/**
+ * Aeterna One CRM — Advanced Engineering & Management Reports Stylesheet (Phase B5)
+ * Karnataka Heritage aesthetic: Warm cream canvas, royal maroon accents, rich gold highlights.
+ */
+
+.reports-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 4px 40px 4px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 1. Header Hero Banner */
+.reports-header-hero {
+  position: relative;
+  background: linear-gradient(135deg, var(--color-bg-surface) 0%, var(--color-gold-50) 100%);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 20px;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-warm-sm);
+  overflow: hidden;
+}
+
+.reports-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 1;
+}
+
+.reports-badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--color-gold-700);
+}
+
+.reports-header-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--color-maroon-900);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.reports-header-subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin: 0;
+}
+
+.reports-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1;
+}
+
+/* 2. Navigation Tabs Bar */
+.reports-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid var(--color-border-subtle);
+  padding-bottom: 2px;
+  overflow-x: auto;
+}
+
+.reports-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px 10px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.reports-tab-btn:hover {
+  color: var(--color-maroon-800);
+  background: var(--color-gold-50);
+}
+
+.reports-tab-btn.active {
+  color: var(--color-maroon-850);
+  background: var(--color-bg-surface);
+  border-bottom: 3px solid var(--color-maroon-800);
+  font-weight: 800;
+}
+
+/* 3. Executive KPI Cards Grid */
+.reports-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 1100px) {
+  .reports-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .reports-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reports-kpi-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-warm-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.reports-kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reports-kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--color-gold-100);
+  color: var(--color-maroon-800);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reports-kpi-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.reports-kpi-val {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+.reports-kpi-subtext {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* 4. Multi-Branch Scorecards Grid */
+.scorecards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 1000px) {
+  .scorecards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scorecard-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: var(--shadow-warm-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scorecard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: 12px;
+}
+
+.scorecard-branch-name {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--color-maroon-900);
+}
+
+.scorecard-target-pill {
+  font-size: 11px;
+  font-weight: 800;
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.scorecard-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.scorecard-row-label {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.scorecard-row-value {
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.scorecard-progress-bar-wrap {
+  width: 100%;
+  height: 8px;
+  background: var(--color-gold-100);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.scorecard-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-gold-500) 0%, var(--color-maroon-800) 100%);
+  border-radius: 4px;
+}
+
+/* 5. 16-Stage Conversion Funnel Visualizer */
+.funnel-container {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 20px;
+  padding: 26px;
+  box-shadow: var(--shadow-warm-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.funnel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.funnel-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--color-bg-canvas);
+  border: 1px solid var(--color-border-subtle);
+  transition: all 0.15s ease;
+}
+
+.funnel-stage-row:hover {
+  background: var(--color-gold-50);
+  border-color: var(--color-gold-300);
+}
+
+.funnel-stage-index {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-maroon-850);
+  color: var(--color-gold-300);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.funnel-stage-title {
+  width: 200px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+}
+
+.funnel-bar-track {
+  flex: 1;
+  height: 12px;
+  background: var(--color-gold-100);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.funnel-bar-fill {
+  height: 100%;
+  background: var(--color-maroon-800);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.funnel-stage-count {
+  width: 70px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+}
+
+.funnel-stage-rate {
+  width: 70px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-gold-700);
+  flex-shrink: 0;
+}
+
+/* 6. Accessible Tabular Alternatives */
+.reports-table-wrap {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-warm-sm);
+}
+
+.reports-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.reports-table th {
+  background: var(--color-gold-50);
+  color: var(--color-maroon-900);
+  font-weight: 800;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-default);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.reports-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-primary);
+}
+
+.reports-table tr:hover td {
+  background: var(--color-gold-50);
+}
+
+/* 7. Print Stylesheet for Clean PDF & Hardcopy Exports (Day 73) */
+@media print {
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .reports-header-actions,
+  .reports-tabs-bar,
+  .sidebar,
+  .header-actions-group,
+  .btn,
+  button {
+    display: none !important;
+  }
+
+  .reports-page-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .reports-kpi-card,
+  .scorecard-card,
+  .funnel-container,
+  .reports-table-wrap {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    page-break-inside: avoid;
+  }
+}

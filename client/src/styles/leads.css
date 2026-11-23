@@ -1,0 +1,574 @@
+/**
+ * Aeterna One CRM — Lead Management Stylesheet
+ * Karnataka Heritage Palette: Royal Maroon (#680b22), Champagne Gold (#b8860b), Warm Sand (#fbf8f4)
+ */
+
+.leads-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 4px 40px 4px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 1. Header Hero Banner */
+.leads-hero {
+  position: relative;
+  background: linear-gradient(135deg, var(--color-bg-surface) 0%, var(--color-gold-50) 100%);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 20px;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-warm-sm);
+  overflow: hidden;
+  gap: 16px;
+}
+
+.leads-hero-backdrop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 55%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.leads-hero-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: right center;
+  opacity: 0.28;
+  filter: contrast(1.05) saturate(1.1);
+}
+
+.leads-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--color-bg-surface) 0%, rgba(251, 248, 244, 0.85) 45%, rgba(251, 248, 244, 0.15) 100%);
+}
+
+.leads-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 1;
+}
+
+.leads-badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--color-gold-700);
+}
+
+.leads-hero-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--color-maroon-900);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.leads-hero-subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin: 0;
+}
+
+.leads-team-pulse-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.leads-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1;
+  flex-wrap: wrap;
+}
+
+/* 2. KPI Metrics Grid */
+.leads-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.leads-kpi-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow-warm-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.leads-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-warm-md);
+  border-color: var(--color-gold-300);
+}
+
+.leads-kpi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.leads-kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-text-muted);
+}
+
+.leads-kpi-val {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--color-maroon-900);
+  line-height: 1;
+}
+
+.leads-kpi-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-gold-50);
+  color: var(--color-gold-700);
+  border: 1px solid var(--color-gold-200);
+}
+
+/* 3. Controls & Filter Bar */
+.leads-controls {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow-warm-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.leads-search-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.leads-search-input-wrap {
+  flex: 1;
+  min-width: 260px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.leads-search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.leads-search-input {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-body);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.leads-search-input:focus {
+  border-color: var(--color-gold-500);
+  box-shadow: 0 0 0 3px rgba(229, 169, 60, 0.15);
+}
+
+.leads-filter-selects {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.leads-filter-select {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  outline: none;
+  cursor: pointer;
+}
+
+.leads-filter-select:focus {
+  border-color: var(--color-gold-500);
+}
+
+/* Quick Follow-up View Tabs */
+.leads-quick-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: 12px;
+  flex-wrap: wrap;
+}
+
+.leads-quick-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.leads-quick-tab:hover:not(.active) {
+  background: var(--color-gold-50);
+  color: var(--color-maroon-900);
+}
+
+.leads-quick-tab.active {
+  background: var(--color-maroon-900);
+  color: #fff;
+  border-color: var(--color-maroon-900);
+}
+
+/* View Mode Bar */
+.leads-view-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+}
+
+/* 4. Table View */
+.leads-table-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 18px;
+  box-shadow: var(--shadow-warm-sm);
+  overflow: hidden;
+}
+
+.leads-table-responsive {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.leads-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.leads-table th {
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.leads-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-primary);
+  vertical-align: middle;
+}
+
+.leads-table tr:hover td {
+  background: var(--color-gold-50);
+}
+
+.lead-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lead-name {
+  font-weight: 800;
+  color: var(--color-maroon-900);
+  font-size: 13px;
+}
+
+.lead-subtext {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+/* Quick Reach-Out Action Buttons */
+.reach-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reach-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-subtle);
+  background: #fff;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reach-btn.whatsapp:hover {
+  background: #25d366;
+  border-color: #25d366;
+  color: #fff;
+}
+
+.reach-btn.phone:hover {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #fff;
+}
+
+.reach-btn.email:hover {
+  background: var(--color-maroon-800);
+  border-color: var(--color-maroon-800);
+  color: #fff;
+}
+
+/* Status Badges Matching Reference Project */
+.lead-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.lead-status-badge:hover {
+  transform: scale(1.04);
+}
+
+.status-New { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+.status-Assigned { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+.status-No-Answer { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.status-Only-WhatsApp { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.status-Interested { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.status-Not-Interested { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.status-Follow-Up { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.status-Visited { background: #fdf4ff; color: #86198f; border: 1px solid #f5d0fe; }
+.status-Deal-Closed { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; font-weight: 800; }
+.status-Confirm-Visitor { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+
+/* Priority Tags */
+.priority-pill {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.priority-high { background: #fee2e2; color: #991b1b; }
+.priority-medium { background: #fef3c7; color: #92400e; }
+.priority-low { background: #f3f4f6; color: #4b5563; }
+
+/* 5. Humanized Cards Grid */
+.leads-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.lead-profile-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 18px;
+  box-shadow: var(--shadow-warm-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+}
+
+.lead-profile-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-warm-md);
+  border-color: var(--color-gold-400);
+}
+
+.lead-card-banner {
+  height: 48px;
+  background: linear-gradient(135deg, var(--color-maroon-900) 0%, var(--color-gold-700) 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+}
+
+.lead-card-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.lead-card-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lead-card-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-maroon-950);
+}
+
+.lead-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--color-gold-50);
+  border: 1px solid var(--color-gold-200);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 11px;
+}
+
+.lead-card-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+}
+
+.lead-card-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border-subtle);
+  background: rgba(251, 248, 244, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* 6. Pagination Bar Matching Reference Project */
+.leads-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--color-gold-50);
+  border-color: var(--color-gold-300);
+  color: var(--color-maroon-900);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .leads-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .leads-search-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .leads-filter-selects {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .leads-filter-select {
+    width: 100%;
+  }
+}

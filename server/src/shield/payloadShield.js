@@ -72,6 +72,12 @@ function validateContentType(req, res, next) {
  */
 function handleParserErrors(err, req, res, next) {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    const rawBody = typeof err.body === 'string' ? err.body.trim() : err.body;
+    // If request sent empty string, whitespace, null, or undefined, recover safely with empty object
+    if (!rawBody || rawBody === 'null' || rawBody === 'undefined' || rawBody === '' || rawBody === '{}') {
+      req.body = {};
+      return next();
+    }
     const errorInfo = getErrorMessage(ERROR_CATEGORIES.INVALID_JSON);
     return res.status(400).json({
       success: false,

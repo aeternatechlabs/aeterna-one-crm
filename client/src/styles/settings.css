@@ -1,0 +1,443 @@
+/**
+ * Aeterna One CRM — Role & Access Control (SettingsPage) Stylesheet
+ * Luxury warm obsidian, royal maroon & champagne gold heritage styling.
+ */
+
+.settings-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 4px 40px 4px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 1. Header Hero Banner */
+.settings-header-hero {
+  position: relative;
+  background: linear-gradient(135deg, var(--color-bg-surface) 0%, var(--color-gold-50) 100%);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 20px;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-warm-sm);
+  overflow: hidden;
+}
+
+.settings-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 1;
+}
+
+.settings-badge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--color-gold-700);
+}
+
+.settings-header-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--color-maroon-900);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.settings-header-subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin: 0;
+}
+
+.settings-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1;
+}
+
+.current-role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  padding: 8px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-maroon-900);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+/* 2. Navigation Tabs */
+.settings-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid var(--color-border-subtle);
+  padding-bottom: 2px;
+}
+
+.settings-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px 8px 0 0;
+}
+
+.settings-tab-btn:hover {
+  color: var(--color-maroon-800);
+  background: var(--color-gold-50);
+}
+
+.settings-tab-btn.active {
+  color: var(--color-maroon-900);
+  border-bottom-color: var(--color-maroon-700);
+  background: var(--color-bg-surface);
+}
+
+/* 3. Access Inspector & Form Area */
+.access-inspector-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-warm-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.inspector-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inspector-section-header h3 {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-maroon-900);
+  margin: 0;
+}
+
+.inspector-section-header p {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.access-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: end;
+}
+
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field-group label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.form-select-control {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.form-select-control:focus {
+  border-color: var(--color-maroon-600);
+  box-shadow: 0 0 0 3px rgba(139, 21, 56, 0.12);
+}
+
+.test-submit-btn {
+  padding: 11px 22px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--color-maroon-800) 0%, var(--color-maroon-900) 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(91, 14, 37, 0.25);
+  height: 42px;
+}
+
+.test-submit-btn:hover {
+  background: var(--color-maroon-900);
+  transform: translateY(-1px);
+}
+
+/* 4. Comparison Results Dual Box */
+.dual-guard-result-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+@media (max-width: 840px) {
+  .dual-guard-result-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+.guard-card {
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.guard-card.allowed {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.guard-card.denied {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.guard-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guard-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-maroon-900);
+}
+
+.guard-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.guard-status-badge.allowed {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.guard-status-badge.denied {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.guard-detail-text {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.guard-meta-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.meta-chip {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+/* 5. Action Simulator Area */
+.simulator-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.simulator-action-btn-card {
+  background: var(--color-bg-surface);
+  border: 1.5px solid var(--color-border-subtle);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.simulator-action-btn-card:hover {
+  border-color: var(--color-gold-400);
+  box-shadow: var(--shadow-warm-sm);
+}
+
+.action-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.action-card-info h4 {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-maroon-900);
+  margin: 0 0 4px 0;
+}
+
+.action-card-info p {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.action-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-trigger-btn.allowed {
+  background: var(--color-gold-50);
+  border-color: var(--color-gold-400);
+  color: var(--color-maroon-900);
+}
+
+.action-trigger-btn.allowed:hover {
+  background: var(--color-maroon-800);
+  color: #fff;
+}
+
+.action-trigger-btn.blocked {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+}
+
+/* 6. Permission Matrix Table */
+.matrix-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+  background: var(--color-bg-surface);
+}
+
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.matrix-table th {
+  background: var(--color-gold-50);
+  color: var(--color-maroon-900);
+  font-weight: 800;
+  padding: 12px 16px;
+  border-bottom: 1.5px solid var(--color-border-subtle);
+  white-space: nowrap;
+}
+
+.matrix-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-primary);
+  vertical-align: middle;
+}
+
+.matrix-table tr:hover td {
+  background: rgba(245, 230, 211, 0.15);
+}
+
+.matrix-check {
+  color: #16a34a;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.matrix-cross {
+  color: #dc2626;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-badge-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--color-gold-50);
+  color: var(--color-maroon-900);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+}

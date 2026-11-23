@@ -54,11 +54,31 @@ export const PipelineCard = ({
     e.target.value = '';
   };
 
+  const handleDragStart = (e) => {
+    if (!canMoveStage || isMutating) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.setData(
+      'application/json',
+      JSON.stringify({
+        _id: student._id,
+        studentName: student.studentName,
+        stage: student.stage,
+        branch: student.branch,
+        documentsVerified: student.documentsVerified,
+      })
+    );
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   return (
     <div
       className={`pipeline-card ${isOptimistic ? 'pipeline-card-optimistic' : ''}`}
       id={`student-card-${student._id}`}
       style={{ borderLeftColor: stageColor.text }}
+      draggable={canMoveStage && !isMutating}
+      onDragStart={handleDragStart}
     >
       {/* Top Header: Student Name & Destination */}
       <div className="pipeline-card-header">

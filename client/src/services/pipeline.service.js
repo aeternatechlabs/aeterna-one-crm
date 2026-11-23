@@ -40,4 +40,20 @@ export const pipelineService = {
   createStudent: async (studentData) => {
     return handleApiCall('post', '/pipeline', studentData);
   },
+
+  /**
+   * Fetch live dashboard performance summary and ribbon counts
+   * @param {Object} params - { branch, period }
+   */
+  getDashboardSummary: async (params = {}) => {
+    return handleApiCall('get', '/pipeline/dashboard-summary', params, { showToast: false });
+  },
+
+  /**
+   * Live global search across pipeline candidates and student profiles
+   * @param {Object} params - { query, branch, limit }
+   */
+  globalSearch: async (params = {}) => {
+    return handleApiCall('get', '/pipeline/global-search', params, { showToast: false });
+  },
 };

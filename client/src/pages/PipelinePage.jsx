@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Users,
   MessageSquare,
@@ -34,6 +34,57 @@ import {
   ROLES,
 } from '../config/constants';
 
+const STAGE_GROUPS = [
+  { id: 'all', label: 'All Stages', stages: PIPELINE_STAGE_ORDER },
+  {
+    id: 'enquiry',
+    label: '1. Enquiry & Qualification',
+    stages: [
+      PIPELINE_STAGES.NEW,
+      PIPELINE_STAGES.CONTACTED,
+      PIPELINE_STAGES.QUALIFIED,
+    ],
+  },
+  {
+    id: 'counselling',
+    label: '2. Counselling & Shortlist',
+    stages: [
+      PIPELINE_STAGES.COUNSELLING_BOOKED,
+      PIPELINE_STAGES.COUNSELLING_COMPLETED,
+      PIPELINE_STAGES.SHORTLISTED,
+    ],
+  },
+  {
+    id: 'application',
+    label: '3. Applications & Documents',
+    stages: [
+      PIPELINE_STAGES.APPLICATION_STARTED,
+      PIPELINE_STAGES.DOCUMENTS_COMPLETE,
+      PIPELINE_STAGES.SUBMITTED,
+    ],
+  },
+  {
+    id: 'offers_visa',
+    label: '4. Offers & Visa',
+    stages: [
+      PIPELINE_STAGES.OFFER_RECEIVED,
+      PIPELINE_STAGES.DEPOSIT_PAID,
+      PIPELINE_STAGES.VISA_FILED,
+      PIPELINE_STAGES.VISA_DECISION,
+    ],
+  },
+  {
+    id: 'outcome',
+    label: '5. Pre-departure & Outcome',
+    stages: [
+      PIPELINE_STAGES.PRE_DEPARTURE,
+      PIPELINE_STAGES.ENROLLED,
+      PIPELINE_STAGES.DEFERRED,
+      PIPELINE_STAGES.LOST,
+    ],
+  },
+];
+
 export const PipelinePage = () => {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN;
@@ -42,6 +93,7 @@ export const PipelinePage = () => {
     isSuperAdmin ? 'all' : user?.branch || BRANCHES.BENGALURU
   );
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeGroup, setActiveGroup] = useState('all');
   const [simulateError, setSimulateError] = useState(false);
 
   // Modals state
@@ -66,6 +118,12 @@ export const PipelinePage = () => {
     refetch,
   } = usePipeline(filters);
 
+  // Filtered stage columns based on active category tab
+  const displayedStages = useMemo(() => {
+    const group = STAGE_GROUPS.find((g) => g.id === activeGroup);
+    return group ? group.stages : PIPELINE_STAGE_ORDER;
+  }, [activeGroup]);
+
   // Mutation Hooks (Optimistic with Revert - Rules 13, 14)
   const updateStageMutation = useUpdateStudentStage();
   const toggleDocsMutation = useToggleDocumentVerification();
@@ -75,8 +133,8 @@ export const PipelinePage = () => {
 
   // Move stage handler: triggers instantaneous optimistic update
   const handleMoveStage = (student, targetStage) => {
-    // If moving to Lost, prompt for reason modal first
-    if (targetStage === PIPELINE_STAGES.LOST) {
+    // If moving to Lost or Deferred, prompt for reason modal first
+    if (targetStage === PIPELINE_STAGES.LOST || targetStage === PIPELINE_STAGES.DEFERRED) {
       setReasonModalState({
         isOpen: true,
         student,
@@ -94,7 +152,7 @@ export const PipelinePage = () => {
     });
   };
 
-  const handleConfirmLost = (reason) => {
+  const handleConfirmReason = ({ reason, deferredIntake }) => {
     if (!reasonModalState.student || !reasonModalState.targetStage) return;
 
     updateStageMutation.mutate({
@@ -102,6 +160,7 @@ export const PipelinePage = () => {
       newStage: reasonModalState.targetStage,
       studentName: reasonModalState.student.studentName,
       reason,
+      deferredIntake,
       simulateError,
     });
 
@@ -148,13 +207,14 @@ export const PipelinePage = () => {
           <img
             src={admissionsBannerImg}
             alt="Admissions & Visa Processing"
-            className="pipeline-banner-img"
+            className="module-banner-img"
+            loading="eager"
           />
         </div>
       </div>
 
-      {/* Real-time Metrics Summary */}
-      <div className="pipeline-metrics-grid">
+      {/* KPI Stat Cards Row */}
+      <div className="pipeline-stats-grid">
         <StatCard
           title="Total Candidates"
           value={stats.total}
@@ -162,26 +222,26 @@ export const PipelinePage = () => {
           color="blue"
         />
         <StatCard
-          title="In Counselling"
-          value={studentsByStage[PIPELINE_STAGES.COUNSELLING]?.length || 0}
-          icon={<MessageSquare size={18} strokeWidth={2} />}
+          title="In Pipeline"
+          value={stats.activeApplications}
+          icon={<ClipboardList size={18} strokeWidth={2} />}
           color="amber"
         />
         <StatCard
-          title="Shortlisted"
-          value={studentsByStage[PIPELINE_STAGES.SHORTLISTED]?.length || 0}
-          icon={<ClipboardList size={18} strokeWidth={2} />}
-          color="purple"
-        />
-        <StatCard
-          title="Applications Submitted"
-          value={studentsByStage[PIPELINE_STAGES.APPLICATION_SUBMITTED]?.length || 0}
-          icon={<Send size={18} strokeWidth={2} />}
+          title="Docs Verified"
+          value={stats.verifiedDocs}
+          icon={<CheckCircle2 size={18} strokeWidth={2} />}
           color="cyan"
         />
         <StatCard
-          title="Visa / Offer Won"
-          value={studentsByStage[PIPELINE_STAGES.OFFER_VISA_WON]?.length || 0}
+          title="Docs Pending"
+          value={stats.pendingDocs}
+          icon={<AlertTriangle size={18} strokeWidth={2} />}
+          color="purple"
+        />
+        <StatCard
+          title="Enrolled"
+          value={stats.enrolled}
           icon={<Trophy size={18} strokeWidth={2} />}
           color="green"
         />
@@ -283,6 +343,29 @@ export const PipelinePage = () => {
         </Button>
       </div>
 
+      {/* Stage Group Category Navigation Tabs */}
+      <div className="pipeline-stage-tabs" role="tablist" aria-label="Pipeline stage groups">
+        {STAGE_GROUPS.map((group) => {
+          const groupCount = group.stages.reduce(
+            (acc, s) => acc + (studentsByStage[s]?.length || 0),
+            0
+          );
+          return (
+            <button
+              key={group.id}
+              type="button"
+              role="tab"
+              aria-selected={activeGroup === group.id}
+              className={`pipeline-stage-tab ${activeGroup === group.id ? 'active' : ''}`}
+              onClick={() => setActiveGroup(group.id)}
+            >
+              <span>{group.label}</span>
+              <span className="pipeline-tab-count">{groupCount}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Kanban Board */}
       {isLoading ? (
         <div className="pipeline-loading-container">
@@ -297,7 +380,7 @@ export const PipelinePage = () => {
         </div>
       ) : (
         <div className="pipeline-kanban-board">
-          {PIPELINE_STAGE_ORDER.map((stageKey) => (
+          {displayedStages.map((stageKey) => (
             <PipelineColumn
               key={stageKey}
               stageKey={stageKey}
@@ -314,13 +397,14 @@ export const PipelinePage = () => {
       <ReasonModal
         isOpen={reasonModalState.isOpen}
         student={reasonModalState.student}
+        targetStage={reasonModalState.targetStage}
         targetStageLabel={
           PIPELINE_STAGE_LABELS[reasonModalState.targetStage] || 'Lost / Deferred'
         }
         onClose={() =>
           setReasonModalState({ isOpen: false, student: null, targetStage: null })
         }
-        onConfirm={handleConfirmLost}
+        onConfirm={handleConfirmReason}
       />
 
       {/* New Candidate Modal */}

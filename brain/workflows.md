@@ -66,28 +66,37 @@ devil paginate(page, limit capped at 100 in user.controller — F-05 fixed).
 marketing role → 403 at requireRole.
 ```
 
-## 4. Stage move (guarded write)
+## 4. Stage move (guarded write & 16-stage state machine)
 
 ```
-PATCH /api/v1/pipeline/:id/stage  { toStage, reason?, simulateError? }
+PATCH /api/v1/pipeline/:id/stage  { stage (or toStage), reason?, expectedStage?, simulateError?, deferredIntake? }
   protect → requireBranchAccess() → requireRole(super, manager, counsellor)
 
   x-simulate-validation-error header OR simulateError:true → 400
-    "Simulated backend validation failure..." (no mutation — rollback demo)
-  invalid toStage (not in PIPELINE_STAGES) → 400
+    "Stage transition rejected: Simulated validation error..." (no mutation — rollback demo)
+  invalid stage (not in PIPELINE_STAGES) → 400
   id not ObjectId → 400; not found → 404
   record branch ≠ user branch (non-super, branchScope≠'all') → 403
-    (DB unchanged — verified)
-  toStage='application_submitted' && !documentsVerified → 400
-  toStage='lost' && (reason missing || <5 chars) → 400
-  → update stage, $push stageHistory {fromStage,toStage,changedAt,
-    changedBy(user._id), reason?}
-  → 200 { student updated, branch, stageHistory entry present,
-    default list projection excludes stageHistory/__v }
+  
+  State Machine & Document Gate Validation (Day 30 verified):
+  - 16-stage lifecycle: New → Contacted → Qualified → Counselling Booked →
+    Counselling Completed → Shortlisted → Application Started → Documents Complete →
+    Submitted → Offer Received → Deposit Paid → Visa Filed → Visa Decision →
+    Pre-departure → Enrolled / Deferred / Lost.
+  - Document verification gate: target is submission stage (submitted, application_submitted)
+    without documentsVerified:true → 400 ("student documents must be verified first").
+  - Exit stages (lost, deferred): reason missing or <5 chars → 400.
+  - Deferred optional intake: deferredIntake string persisted to record.
+  - Reopening gate: candidate currently in lost or deferred cannot be reopened
+    by counsellor, marketing, or application_officer → 403 ("Only Super Admin or Branch Manager can reopen").
+  - Concurrency conflict (SEC-07): client expectedStage ≠ DB stage → 409 Conflict.
+  - Atomic commit: findOneAndUpdate with atomicFilter guarantees state and documentsVerified in single DB op.
+  → update stage, $push stageHistory {fromStage,toStage,changedAt,changedBy,reason}
+  → 200 { student updated, stage, branch, documentsVerified }
 ```
 
 Docs toggle: `PATCH /:id/documents` — roles super/manager/application_officer
-(counsellor 403); 404 / branch record guard; explicit boolean else toggle.
+(counsellor & marketing 403); 404 / branch record guard; explicit boolean else toggle.
 
 ## 5. Create pipeline student
 
@@ -124,3 +133,131 @@ GET /api/v1/users?page=&limit=&search=&role=&branch=&fields=
 `GET /health` (outside rate limiter) and `GET /api/v1/health` →
 200 JSON with `database: 'connected'` and `status: 'healthy'`, or
 **503** with `status: 'unhealthy'` when the DB is down (F-03 fixed).
+
+## 9. Student 360° Profile & Data Classification Lifecycle (Phase B3 Day 31)
+
+```
+8 Profile Sections:
+  1. Identity & Contact (Core PII, Tier 3)
+  2. Academic History (Tier 2)
+  3. Standardized Test Scores (Tier 2)
+  4. Financial Capability & Budget (Confidential Financial Assets, Tier 4)
+  5. Study Abroad Preferences (Operational, Tier 2)
+  6. University Shortlist (Operational, Tier 2)
+  7. Active Applications (Operational, Tier 2)
+  8. Internal Notes & Timeline (Internal CRM, Tier 2)
+
+4-Tier Data Sensitivity Model (India DPDP Act 2023 / GDPR / FERPA):
+  - Tier 1: Public / Operational Metadata (studentId, branch, status)
+  - Tier 2: Internal CRM & Academic History (degrees, GPA, test scores, shortlists)
+  - Tier 3: Sensitive PII (passport, national ID, full DOB, residential address)
+  - Tier 4: Confidential Financial / Vault Assets (bank statements, sponsor affidavits, ITRs)
+
+RBAC & Branch Containment:
+  - Super Admin: full access across all 4 tiers and all branches.
+  - Branch Manager: full access within own branch; masked Tier 4 view.
+  - Counsellor: read/write Tier 1-3, view-only Tier 4 within own branch.
+  - Application Officer: full read across Tier 1-4 for visa filing; no delete.
+  - Marketing: 0 access (strictly forbidden across all 4 tiers).
+
+Retention & Deletion Lifecycle:
+  - Active: Enrolled + 5 years compliance retention.
+  - Inactive / Lost: Soft-delete + DPDP/GDPR PII anonymization after 180 days retention.
+```
+
+## 10. Lead-to-Student Conversion & Attribution Engine (Phase B3 Day 32)
+
+```
+Lead Conversion Flow:
+  convertLeadToStudent({ lead, user, conversionNotes, additionalProfileData })
+    │
+    ├── 1. Branch Authorization Guard
+    │     Non-super user branch ≠ lead.branch → 403 / CROSS_BRANCH_CONVERSION_FORBIDDEN
+    │
+    ├── 2. Duplicate Check Rule A (Lead Already Converted)
+    │     lead.convertedToStudent OR Student.findOne({ 'conversionSource.originalLeadId': lead._id })
+    │     → duplicate: true, code: 'LEAD_ALREADY_CONVERTED'
+    │
+    ├── 3. Duplicate Check Rule B (Same-Branch Email Collision)
+    │     Student.findOne({ branch: lead.branch, email: normalizedEmail, isDeleted: false })
+    │     → duplicate: true, code: 'DUPLICATE_STUDENT_EMAIL'
+    │
+    ├── 4. Unique Student ID Generation
+    │     AET-{BRANCH_CODE}-{YEAR}-{4_HEX_CHARS} (e.g., AET-BLR-2026-9E3F)
+    │
+    ├── 5. 8-Section Profile Assembly
+    │     - identity (studentName, email, phone, dob, address, passport)
+    │     - academics (degrees, GPA, backlogs, records)
+    │     - testScores (IELTS, TOEFL, PTE, GRE, GMAT, etc.)
+    │     - financial (annual budget, funding source, loan status, sponsor)
+    │     - preferences (countries, degree level, fields of study, intakes)
+    │     - shortlist (target universities mapped from candidate lead)
+    │     - applications (active application status if stage >= application_started)
+    │     - notes (consolidated lead notes + conversion remarks)
+    │
+    ├── 6. Immutable Source Attribution
+    │     - originalLeadId, originalSource, convertedAt, convertedBy, convertedByName,
+    │       initialStageAtConversion, leadCreatedAt
+    │
+    └── 7. Atomic Backlink & Audit Log
+          - lead.convertedToStudent = student._id
+          - lead.stageHistory.push("Lead converted to Student 360 profile (studentId)")
+```
+
+## 11. Student 360° Overview UI Workflow (Phase B3 Day 34)
+
+```
+Student 360° Frontend Flow:
+  1. Route Access (/students & /students/:id):
+     - Double-guarded by ProtectedRoute: super_admin, branch_manager, counsellor, application_officer.
+     - Marketing strictly redirected to /unauthorized.
+  2. Directory Mode:
+     - Search input with global caret typing animation.
+     - Branch filter (super_admin has 'all', branch staff restricted to own branch).
+     - Status filter (active, enrolled, archived, withdrawn).
+     - Responsive student cards displaying studentId, destination, and counsellor.
+  3. Detailed Profile Mode (/students/:id):
+     - StudentHeader: studentId badge, status, branch dot, email/phone contact pills, action buttons.
+     - StudentKeyFacts: 6-card summary (Destination, Degree, CGPA/Backlogs, Tests, Budget/Loan, Applications).
+     - StudentTabs: 8 section panels (Overview, Academics, Tests, Preferences, Shortlist, Applications, Financial, Notes).
+     - Role-Based Field Masking:
+       * Counsellor: passportNumber masked ('****1234'), sponsor income hidden.
+       * Branch Manager & Super Admin: full unmasked access.
+     - AddNoteModal: category select + consultation remarks submitted via TanStack mutation.
+     - Shimmer Skeletons: rendered during initial fetch and cache transitions.
+```
+
+## 12. Document Vault & Verification Gate Workflow (Phase B3 Days 35–44)
+
+```
+Document Vault & Compliance Gate Flow:
+  1. File Upload (Days 37-38):
+     - Client requests upload intent: POST /api/v1/students/:id/vault/upload-intent
+     - Server validates MIME allowlist (PDF, JPEG, PNG, WEBP), 10MB ceiling, and generates canonical private storageKey:
+       vault/{branch}/{studentId}/{category}/{timestamp}_{random}_{sanitizedFileName}
+     - Client uploads file buffer via secure proxy POST /api/v1/students/:id/vault/upload
+     - Server inspects binary magic bytes (%PDF-, 0xFFD8FF, 0x89PNG, RIFF...WEBP) to prevent MIME spoofing
+     - Buffer written to storage adapter (Cloudflare R2/S3 or Sandboxed Local Driver)
+     - Document record saved (isVerified: false); DOCUMENT_UPLOADED audit event logged.
+
+  2. Secure Viewing & Download (Day 39):
+     - Client calls GET /api/v1/students/:id/vault/:docId/download or /preview
+     - Server checks role & branch containment, creates HMAC-SHA256 signed access token (15-minute TTL)
+     - Signed delivery endpoint GET /api/v1/vault-storage/file?token=... verifies token signature with timingSafeEqual
+     - Streams file with strict headers:
+       * Content-Disposition: attachment; filename="..." (or scoped inline)
+       * Cache-Control: private, no-store
+       * X-Content-Type-Options: nosniff
+
+  3. Verification Gate & Pipeline Synchronization (Day 40):
+     - Reviewer calls PATCH /api/v1/students/:id/vault/:docId/verify
+     - Role Check: Super Admin, Branch Manager, Application Officer allowed; Counsellor receives 403 Forbidden.
+     - Document marked isVerified: true, verifiedBy: req.user._id, verifiedAt: new Date().
+     - syncPipelineDocumentGate checks if mandatory categories (passport_identity, academic_transcripts, financial_affidavits) are all verified.
+     - When all 3 are verified, linked PipelineStudent.documentsVerified is atomically updated to true, unlocking the admissions submission gate!
+
+  4. Retention & Soft-Deletion Lifecycle (Day 42):
+     - DELETE /api/v1/students/:id/vault/:docId restricted to Super Admin & Branch Manager (403 for Counsellor & Officer).
+     - Document marked isDeleted: true, deletedAt: new Date(), deletedBy: req.user._id.
+     - Pipeline document gate re-evaluated; DOCUMENT_SOFT_DELETED audit event logged.
+```

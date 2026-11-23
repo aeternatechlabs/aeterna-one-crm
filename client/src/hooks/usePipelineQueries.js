@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { pipelineService } from '../services/pipeline.service';
-import { PIPELINE_STAGES } from '../config/constants';
+import { PIPELINE_STAGES, PIPELINE_STAGE_ORDER } from '../config/constants';
 
 /**
  * Standardized Query Key Factory for Admissions Pipeline (Rule 12)
@@ -44,21 +44,26 @@ export const usePipeline = (filters = {}, queryOptions = {}) => {
 
   // Group students by stage for instantaneous Kanban board rendering
   const studentsByStage = useMemo(() => {
-    const grouped = {
-      [PIPELINE_STAGES.NEW_ENQUIRY]: [],
-      [PIPELINE_STAGES.COUNSELLING]: [],
-      [PIPELINE_STAGES.SHORTLISTED]: [],
-      [PIPELINE_STAGES.APPLICATION_SUBMITTED]: [],
-      [PIPELINE_STAGES.OFFER_VISA_WON]: [],
-      [PIPELINE_STAGES.LOST]: [],
-    };
+    const grouped = {};
+    PIPELINE_STAGE_ORDER.forEach((stage) => {
+      grouped[stage] = [];
+    });
+    // Ensure legacy stages also have arrays
+    [
+      PIPELINE_STAGES.NEW_ENQUIRY,
+      PIPELINE_STAGES.COUNSELLING,
+      PIPELINE_STAGES.APPLICATION_SUBMITTED,
+      PIPELINE_STAGES.OFFER_VISA_WON,
+    ].forEach((stage) => {
+      if (!grouped[stage]) grouped[stage] = [];
+    });
 
     students.forEach((student) => {
-      const stage = student.stage || PIPELINE_STAGES.NEW_ENQUIRY;
+      const stage = student.stage || PIPELINE_STAGES.NEW;
       if (grouped[stage]) {
         grouped[stage].push(student);
       } else {
-        grouped[PIPELINE_STAGES.NEW_ENQUIRY].push(student);
+        grouped[PIPELINE_STAGES.NEW].push(student);
       }
     });
 
@@ -73,7 +78,12 @@ export const usePipeline = (filters = {}, queryOptions = {}) => {
       pendingDocs: students.filter((s) => !s.documentsVerified).length,
       activeApplications: students.filter(
         (s) =>
-          s.stage === PIPELINE_STAGES.APPLICATION_SUBMITTED ||
+          s.stage !== PIPELINE_STAGES.LOST &&
+          s.stage !== PIPELINE_STAGES.DEFERRED
+      ).length,
+      enrolled: students.filter(
+        (s) =>
+          s.stage === PIPELINE_STAGES.ENROLLED ||
           s.stage === PIPELINE_STAGES.OFFER_VISA_WON
       ).length,
     };

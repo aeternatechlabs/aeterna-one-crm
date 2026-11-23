@@ -86,12 +86,14 @@ users list: super + branch_manager only.
 - ⚠️ latent: pre-provisioned non-super `branch:'all'` account reads all
   branches (register validator blocks creating them; model enum allows).
 
-### Business rules — `opencode-pipeline-validation.test.js`
-- ✅ invalid stage 400; docs-before-submitted gate; lost reason ≥5 chars;
-  `simulateError` (body+header) → 400, no mutation; 404 unknown id, 400
-  non-ObjectId; `stageHistory` `{from,to,changedBy}` recorded; list default
-  excludes `stageHistory`/`__v`; search matches; pagination works;
-  `limit=abc` → default 10; **password never serialized** in any response.
+### Business rules & Phase B2 Gates — `opencode-pipeline-validation.test.js` & `day30-b2-independent-verification.test.js` (11/11)
+- ✅ 16-stage state machine matrix: sequential forward progression (`new` → `enrolled`), backward revision steps within allowed graph, and strict 400 rejection of arbitrary pipeline leaps (e.g., `new` → `enrolled`, `shortlisted` → `visa_filed`).
+- ✅ Document verification gate: transition to `submitted` or `application_submitted` without `documentsVerified:true` returns 400 with descriptive error ("student documents must be verified first").
+- ✅ Exit stage integrity: transition to `lost` or `deferred` strictly requires mandatory reason ≥ 5 chars (400 if missing or <5); optional `deferredIntake` persisted.
+- ✅ Reopening protection: candidate currently in `lost` or `deferred` cannot be reopened by `counsellor`, `marketing`, or `application_officer` (403 Forbidden); restricted strictly to `super_admin` and `branch_manager`.
+- ✅ Optimistic concurrency (SEC-07): `expectedStage` checked atomically; concurrent conflicting updates return 409 Conflict.
+- ✅ Super Admin administrative override: administrative cross-stage correction permitted for Super Admin while preserving document checklist safety gates.
+- ✅ `simulateError` (body+header) → 400, no mutation; 404 unknown id, 400 non-ObjectId; `stageHistory` `{from,to,changedBy,reason}` recorded; list default excludes `stageHistory`/`__v`; search matches; pagination bounds capped.
 
 ### HTTP hardening — `opencode-http-hardening.test.js`
 - ✅ helmet header set present; structured JSON 404; health reflects live DB
@@ -132,6 +134,16 @@ users list: super + branch_manager only.
   error and never escape branch scope, body `branch: 'all'` → 201 persisted
   with **own** branch, full 5-role `GET /users` matrix, anonymous +
   garbage-token → 401. **30/30 pass, exit 0.**
+
+### Student 360° Data Sensitivity & Privacy Classification (Phase B3 Day 31)
+- ✅ **Four-Tier Classification Model:** Formally documented in `docs/STUDENT_360_DATA_CLASSIFICATION_AND_REQUIREMENTS.md` compliant with DPDP Act 2023, GDPR, and FERPA.
+  - Tier 1: Public / Operational Metadata (branch, status, system IDs).
+  - Tier 2: Internal CRM & Academic History (scores, shortlists, applications).
+  - Tier 3: Sensitive PII (passport numbers, national IDs, residential address, emergency contacts).
+  - Tier 4: Confidential Financial / Vault Assets (bank statements, tax returns, sponsor affidavits, loan sanctions).
+- ✅ **Zero Marketing Access:** The `marketing` role is strictly barred from all Student 360° profile sections and vault documents (0 access across all 4 tiers).
+- ✅ **Branch Isolation:** Non-super users are strictly bound to their assigned physical branch (`bengaluru`, `mysuru`, or `belagavi`). Cross-branch profile access returns 403.
+- ✅ **5-Year Compliance Retention & Soft-Delete Lifecycle:** Enrolled students retained for 5 years after graduation; rejected/withdrawn leads anonymize PII after 180 days with soft-delete safeguards.
 
 
 ## Remediated findings — verified by OpenCode (13 Nov 2026)
@@ -186,3 +198,19 @@ Retained as permanent lessons:
   term with `new RegExp(term)` try/catch → `ApiError(400)`, escape
   metacharacters (`term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')`), then
   `$regex: escaped`. Any future search feature must follow this pattern.
+
+## Phase B3: Student 360° Profile & Document Vault Security Model
+
+Verified across dedicated suites `day35-36-academic-financial.test.js` (19/19), `day37-42-vault-storage-checklist.test.js` (18/18), and `day44-vault-security-regression.test.js` (11/11).
+
+| Threat / Attack Vector | Mitigation Architecture | Verification Evidence |
+| :-- | :-- | :-- |
+| **Insecure Direct Object Reference (IDOR)** | Route parameters `:id` (student) and `:docId` (document) strictly cross-verified against DB row ownership (`document.student === student._id`); cross-student queries return 404 | `day44-vault-security-regression.test.js` subtest 2 |
+| **Cross-Branch Information Leakage** | All vault endpoints (`upload-intent`, `upload`, `download`, `preview`, `verify`, `delete`) enforce physical branch isolation; foreign branch staff rejected with 403 Forbidden | `day44-vault-security-regression.test.js` subtest 3 |
+| **MIME & Extension Spoofing** | Two-phase verification: 1. Strict metadata check (PDF, JPEG, PNG, WEBP only; matching extension). 2. Magic byte binary header signature inspection (`%PDF-`, `0xFFD8FF`, `0x89PNG`, `RIFF...WEBP`); mismatched payloads return 400 | `day37-42-vault-storage-checklist.test.js` subtest 1 & `day44` subtest 4 |
+| **Path Traversal in Uploads** | File names sanitized using `path.basename()`, stripped of `../`, `..\`, and non-alphanumeric special characters; stored under random hex & timestamp prefix | `day37-42-vault-storage-checklist.test.js` subtest 1 |
+| **Denial of Service / Oversized Payloads** | Enforced 10MB payload ceiling (`MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024`) in both metadata pre-check and binary stream/buffer validator | `day44-vault-security-regression.test.js` subtest 4 |
+| **Public Object Storage Exposure** | No public cloud storage bucket or direct object URLs. All client downloads routed through short-lived (15m TTL) HMAC-SHA256 signed access tokens with constant-time signature comparison (`crypto.timingSafeEqual`) | `day37-42-vault-storage-checklist.test.js` subtest 2 & `day44` subtest 5 |
+| **Unauthorized Document Verification** | Verification privilege strictly gated to Super Admin, Branch Manager, and Application Officer. Counsellor and Marketing roles receive HTTP 403 Forbidden | `day37-42-vault-storage-checklist.test.js` subtest 3 & `day44` subtest 3 |
+| **Unauthorized Loan Sanction Tampering** | Financial capability updates with `loanStatus: 'sanctioned'` or `'disbursed'` strictly gated to Branch Manager and Super Admin; regular counsellors receive 403 | `day35-36-academic-financial.test.js` subtest 3 |
+| **Audit Trail Tampering & Silent Deletion** | Soft-deletion lifecycle (`isDeleted: true`, `deletedAt`, `deletedBy`) with immutable audit logging (`DocumentAudit`); physical file retained per DPDP/GDPR retention schedule; audit events cannot be modified or deleted via API | `day44-vault-security-regression.test.js` subtest 6 |

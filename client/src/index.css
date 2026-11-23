@@ -9,6 +9,9 @@
 @import './styles/dashboard.css';
 @import './styles/auth.css';
 @import './styles/pipeline.css';
+@import './styles/students.css';
+@import './styles/tasks.css';
+@import './styles/reports.css';
 
 @tailwind base;
 @tailwind components;

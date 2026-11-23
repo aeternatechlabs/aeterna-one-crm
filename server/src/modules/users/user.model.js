@@ -80,6 +80,22 @@ const userSchema = new mongoose.Schema(
       default: 0,
       index: true,
     },
+    resetOTP: {
+      type: String,
+      select: false,
+    },
+    resetOTPExpires: {
+      type: Date,
+      select: false,
+    },
+    resetToken: {
+      type: String,
+      select: false,
+    },
+    resetTokenExpires: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -90,6 +106,10 @@ const userSchema = new mongoose.Schema(
         delete ret.failedLoginAttempts;
         delete ret.lockUntil;
         delete ret.tokenVersion;
+        delete ret.resetOTP;
+        delete ret.resetOTPExpires;
+        delete ret.resetToken;
+        delete ret.resetTokenExpires;
         delete ret.__v;
         return ret;
       },
@@ -100,6 +120,10 @@ const userSchema = new mongoose.Schema(
         delete ret.failedLoginAttempts;
         delete ret.lockUntil;
         delete ret.tokenVersion;
+        delete ret.resetOTP;
+        delete ret.resetOTPExpires;
+        delete ret.resetToken;
+        delete ret.resetTokenExpires;
         delete ret.__v;
         return ret;
       },

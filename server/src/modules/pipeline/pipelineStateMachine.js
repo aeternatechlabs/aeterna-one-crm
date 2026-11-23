@@ -1,0 +1,231 @@
+const { PIPELINE_STAGES, ROLES } = require('../../config/constants');
+
+const ALLOWED_STAGE_TRANSITIONS = {
+  [PIPELINE_STAGES.NEW]: [
+    PIPELINE_STAGES.CONTACTED,
+    PIPELINE_STAGES.QUALIFIED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.CONTACTED]: [
+    PIPELINE_STAGES.NEW,
+    PIPELINE_STAGES.QUALIFIED,
+    PIPELINE_STAGES.COUNSELLING_BOOKED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.QUALIFIED]: [
+    PIPELINE_STAGES.CONTACTED,
+    PIPELINE_STAGES.COUNSELLING_BOOKED,
+    PIPELINE_STAGES.COUNSELLING_COMPLETED,
+    PIPELINE_STAGES.SHORTLISTED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.COUNSELLING_BOOKED]: [
+    PIPELINE_STAGES.QUALIFIED,
+    PIPELINE_STAGES.COUNSELLING_COMPLETED,
+    PIPELINE_STAGES.SHORTLISTED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.COUNSELLING_COMPLETED]: [
+    PIPELINE_STAGES.COUNSELLING_BOOKED,
+    PIPELINE_STAGES.SHORTLISTED,
+    PIPELINE_STAGES.APPLICATION_STARTED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.SHORTLISTED]: [
+    PIPELINE_STAGES.COUNSELLING_COMPLETED,
+    PIPELINE_STAGES.APPLICATION_STARTED,
+    PIPELINE_STAGES.DOCUMENTS_COMPLETE,
+    PIPELINE_STAGES.SUBMITTED,
+    PIPELINE_STAGES.APPLICATION_SUBMITTED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.APPLICATION_STARTED]: [
+    PIPELINE_STAGES.SHORTLISTED,
+    PIPELINE_STAGES.DOCUMENTS_COMPLETE,
+    PIPELINE_STAGES.SUBMITTED,
+    PIPELINE_STAGES.APPLICATION_SUBMITTED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.DOCUMENTS_COMPLETE]: [
+    PIPELINE_STAGES.APPLICATION_STARTED,
+    PIPELINE_STAGES.SUBMITTED,
+    PIPELINE_STAGES.APPLICATION_SUBMITTED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.SUBMITTED]: [
+    PIPELINE_STAGES.DOCUMENTS_COMPLETE,
+    PIPELINE_STAGES.APPLICATION_STARTED,
+    PIPELINE_STAGES.OFFER_RECEIVED,
+    PIPELINE_STAGES.OFFER_VISA_WON,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.OFFER_RECEIVED]: [
+    PIPELINE_STAGES.SUBMITTED,
+    PIPELINE_STAGES.APPLICATION_SUBMITTED,
+    PIPELINE_STAGES.DEPOSIT_PAID,
+    PIPELINE_STAGES.VISA_FILED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.DEPOSIT_PAID]: [
+    PIPELINE_STAGES.OFFER_RECEIVED,
+    PIPELINE_STAGES.VISA_FILED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.VISA_FILED]: [
+    PIPELINE_STAGES.DEPOSIT_PAID,
+    PIPELINE_STAGES.VISA_DECISION,
+    PIPELINE_STAGES.OFFER_VISA_WON,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.VISA_DECISION]: [
+    PIPELINE_STAGES.VISA_FILED,
+    PIPELINE_STAGES.PRE_DEPARTURE,
+    PIPELINE_STAGES.ENROLLED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.PRE_DEPARTURE]: [
+    PIPELINE_STAGES.VISA_DECISION,
+    PIPELINE_STAGES.ENROLLED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.ENROLLED]: [
+    PIPELINE_STAGES.PRE_DEPARTURE,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.DEFERRED]: [
+    PIPELINE_STAGES.NEW,
+    PIPELINE_STAGES.NEW_ENQUIRY,
+    PIPELINE_STAGES.CONTACTED,
+    PIPELINE_STAGES.SHORTLISTED,
+    PIPELINE_STAGES.APPLICATION_STARTED,
+  ],
+  [PIPELINE_STAGES.LOST]: [
+    PIPELINE_STAGES.NEW,
+    PIPELINE_STAGES.NEW_ENQUIRY,
+    PIPELINE_STAGES.CONTACTED,
+  ],
+
+  // Legacy mappings for tests
+  [PIPELINE_STAGES.NEW_ENQUIRY]: [
+    PIPELINE_STAGES.NEW,
+    PIPELINE_STAGES.CONTACTED,
+    PIPELINE_STAGES.COUNSELLING,
+    PIPELINE_STAGES.COUNSELLING_BOOKED,
+    PIPELINE_STAGES.COUNSELLING_COMPLETED,
+    PIPELINE_STAGES.SHORTLISTED,
+    PIPELINE_STAGES.APPLICATION_SUBMITTED,
+    PIPELINE_STAGES.OFFER_VISA_WON,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.COUNSELLING]: [
+    PIPELINE_STAGES.SHORTLISTED,
+    PIPELINE_STAGES.APPLICATION_SUBMITTED,
+    PIPELINE_STAGES.SUBMITTED,
+    PIPELINE_STAGES.OFFER_VISA_WON,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.APPLICATION_SUBMITTED]: [
+    PIPELINE_STAGES.OFFER_VISA_WON,
+    PIPELINE_STAGES.OFFER_RECEIVED,
+    PIPELINE_STAGES.LOST,
+    PIPELINE_STAGES.DEFERRED,
+  ],
+  [PIPELINE_STAGES.OFFER_VISA_WON]: [
+    PIPELINE_STAGES.ENROLLED,
+    PIPELINE_STAGES.PRE_DEPARTURE,
+    PIPELINE_STAGES.DEFERRED,
+    PIPELINE_STAGES.LOST,
+  ],
+};
+
+function isSubmissionStage(stage) {
+  return stage === PIPELINE_STAGES.SUBMITTED || stage === PIPELINE_STAGES.APPLICATION_SUBMITTED;
+}
+
+function isExitStage(stage) {
+  return stage === PIPELINE_STAGES.LOST || stage === PIPELINE_STAGES.DEFERRED;
+}
+
+function validatePipelineTransition({ currentStage, targetStage, userRole, documentsVerified, reason }) {
+  if (!currentStage || !targetStage) {
+    return { valid: false, statusCode: 400, error: 'Current stage and target stage are required.' };
+  }
+
+  if (currentStage === targetStage) {
+    return { valid: true };
+  }
+
+  const validStages = Object.values(PIPELINE_STAGES);
+  if (!validStages.includes(targetStage)) {
+    return { valid: false, statusCode: 400, error: `Invalid target pipeline stage: ${targetStage}` };
+  }
+
+  // Document checklist gate check
+  if (isSubmissionStage(targetStage) && !documentsVerified) {
+    return {
+      valid: false,
+      statusCode: 400,
+      error: 'Cannot move to Application Submitted: student documents must be verified first. Academic transcripts & passport verification are pending.',
+    };
+  }
+
+  // Lost or Deferred mandatory reason check
+  if (isExitStage(targetStage)) {
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
+      return {
+        valid: false,
+        statusCode: 400,
+        error: `A mandatory reason of at least 5 characters is required to move candidate to ${targetStage}.`,
+      };
+    }
+  }
+
+  // Reopening from Lost or Deferred check
+  if (isExitStage(currentStage)) {
+    const isPrivileged = userRole === ROLES.SUPER_ADMIN || userRole === ROLES.BRANCH_MANAGER;
+    if (!isPrivileged) {
+      return {
+        valid: false,
+        statusCode: 403,
+        error: 'Only Super Admin or Branch Manager can reopen a Lost or Deferred candidate.',
+      };
+    }
+  }
+
+  // Transition validation check
+  const allowedNext = ALLOWED_STAGE_TRANSITIONS[currentStage];
+  const isSuperAdmin = userRole === ROLES.SUPER_ADMIN;
+
+  if (!isSuperAdmin && allowedNext && !allowedNext.includes(targetStage)) {
+    return {
+      valid: false,
+      statusCode: 400,
+      error: `Invalid stage transition from "${currentStage}" to "${targetStage}".`,
+    };
+  }
+
+  return { valid: true };
+}
+
+module.exports = {
+  ALLOWED_STAGE_TRANSITIONS,
+  isSubmissionStage,
+  isExitStage,
+  validatePipelineTransition,
+};

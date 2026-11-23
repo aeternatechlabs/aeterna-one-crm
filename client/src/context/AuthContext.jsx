@@ -62,12 +62,19 @@ export const AuthProvider = ({ children }) => {
     const res = await authService.login(credentials);
     const authenticatedUser = res.user;
     const authToken = res.token;
+    const refreshToken = res.refreshToken;
 
     setUser(authenticatedUser);
     setToken(authToken);
 
     if (authenticatedUser) {
       localStorage.setItem('aeterna_user', JSON.stringify(authenticatedUser));
+    }
+    if (authToken) {
+      localStorage.setItem('aeterna_token', authToken);
+    }
+    if (refreshToken) {
+      localStorage.setItem('aeterna_refresh_token', refreshToken);
     }
 
     return authenticatedUser;
@@ -83,6 +90,8 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setToken(null);
       localStorage.removeItem('aeterna_user');
+      localStorage.removeItem('aeterna_token');
+      localStorage.removeItem('aeterna_refresh_token');
       initialAuthPromise = null;
     }
   }, []);

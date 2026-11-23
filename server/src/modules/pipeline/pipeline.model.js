@@ -84,6 +84,31 @@ const pipelineStudentSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    exitReason: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    deferredIntake: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    convertedToStudent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Student',
+      default: null,
+      index: true,
+    },
+    convertedAt: {
+      type: Date,
+      default: null,
+    },
+    convertedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     stageHistory: [
       {
         fromStage: { type: String, required: true },

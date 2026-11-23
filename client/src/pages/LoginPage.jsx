@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Crown, Building2, GraduationCap, Building, ClipboardCheck, MapPin,
@@ -6,7 +6,9 @@ import {
   BarChart3, GitFork,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useAnimatedCaret } from '../hooks/useAnimatedCaret';
 import { DEMO_CREDENTIALS } from '../config/constants';
+import { ForgotPasswordModal } from '../components/auth/ForgotPasswordModal';
 import aeternaLogo from '../assets/brand/logo.webp';
 import landmarkSvg from '../assets/heritage/landmark.svg';
 import bottomLeftPattern from '../assets/heritage/bottom-left-pattern.svg';
@@ -36,12 +38,34 @@ export const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [resetSuccessMessage, setResetSuccessMessage] = useState('');
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isDev = import.meta.env.DEV;
   const redirectPath = location.state?.from?.pathname || '/dashboard';
+
+  const emailInputRef = useRef(null);
+  const emailContainerRef = useRef(null);
+  const emailMeasureRef = useRef(null);
+  const emailCaret = useAnimatedCaret({
+    inputRef: emailInputRef,
+    containerRef: emailContainerRef,
+    measureRef: emailMeasureRef,
+    value: email,
+  });
+
+  const passwordInputRef = useRef(null);
+  const passwordContainerRef = useRef(null);
+  const passwordMeasureRef = useRef(null);
+  const passwordCaret = useAnimatedCaret({
+    inputRef: passwordInputRef,
+    containerRef: passwordContainerRef,
+    measureRef: passwordMeasureRef,
+    value: password,
+  });
 
   React.useEffect(() => {
     if (isAuthenticated) navigate('/dashboard', { replace: true });
@@ -214,6 +238,13 @@ export const LoginPage = () => {
               </p>
             </div>
 
+            {resetSuccessMessage && (
+              <div className="login-success flex items-start gap-2 -mt-1 mb-3 p-2.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-800 text-xs leading-snug" role="status" aria-live="polite">
+                <span className="font-bold">✓</span>
+                <span>{resetSuccessMessage}</span>
+              </div>
+            )}
+
             {error && (
               <div className="login-error flex items-start gap-2 -mt-1 mb-3 p-2.5 rounded-xl border border-[#f0c3c1] bg-[#fff1ef] text-[#9f2929] text-xs leading-snug" role="alert" aria-live="polite">
                 <AlertCircle size={16} className="flex-none mt-0.5" />
@@ -226,21 +257,101 @@ export const LoginPage = () => {
                 <label className="text-[#745037] text-[9.5px] font-extrabold tracking-[0.14em] uppercase" htmlFor="staff-email">EMAIL OR USERNAME</label>
                 <div className="input-shell flex items-center gap-2.5 h-11 sm:h-[46px] px-3.5 rounded-xl border border-[#decbb7] bg-[#fbf8f3] text-[#34111a] shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 focus-within:border-[#caa050] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#e8b549]/20">
                   <Mail size={16} className="text-[#9c8272] flex-none" />
-                  <input id="staff-email" name="email" type="email" placeholder="Enter your staff email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="username" className="w-full bg-transparent border-none outline-none text-[#2b0c14] text-[13px] font-medium placeholder:text-[#ab978b]" />
+                  <div ref={emailContainerRef} className="relative flex-1 flex items-center min-w-0">
+                    <input
+                      ref={emailInputRef}
+                      id="staff-email"
+                      name="email"
+                      type="email"
+                      placeholder="Enter your staff email"
+                      value={email}
+                      onChange={(event) => {
+                        setEmail(event.target.value);
+                        requestAnimationFrame(() => emailCaret.updateCaret(event.target));
+                      }}
+                      onFocus={(event) => {
+                        requestAnimationFrame(() => emailCaret.updateCaret(event.target));
+                      }}
+                      onBlur={() => emailCaret.hideCaret()}
+                      onKeyUp={(event) => {
+                        requestAnimationFrame(() => emailCaret.updateCaret(event.target));
+                      }}
+                      onClick={(event) => {
+                        requestAnimationFrame(() => emailCaret.updateCaret(event.target));
+                      }}
+                      required
+                      autoComplete="username"
+                      className="w-full bg-transparent border-none outline-none text-[#2b0c14] text-[13px] font-medium placeholder:text-[#ab978b]"
+                      style={{ caretColor: 'transparent' }}
+                    />
+                    <span ref={emailMeasureRef} aria-hidden="true" className="input-measure-span" />
+                    <span
+                      className={`animated-caret ${emailCaret.isTyping ? 'typing' : 'blinking'}`}
+                      style={{
+                        transform: `translateX(${emailCaret.caretX}px) translateY(-50%)`,
+                        opacity: emailCaret.caretOpacity,
+                        backgroundColor: '#caa050',
+                      }}
+                      aria-hidden="true"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="field-group flex flex-col gap-1">
                 <label className="text-[#745037] text-[9.5px] font-extrabold tracking-[0.14em] uppercase" htmlFor="staff-password">PASSWORD</label>
                 <div className="input-shell flex items-center gap-2.5 h-11 sm:h-[46px] px-3.5 rounded-xl border border-[#decbb7] bg-[#fbf8f3] text-[#34111a] shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 focus-within:border-[#caa050] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#e8b549]/20">
                   <Lock size={16} className="text-[#9c8272] flex-none" />
-                  <input id="staff-password" name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" value={password} onChange={(event) => setPassword(event.target.value)} required autoComplete="current-password" className="w-full bg-transparent border-none outline-none text-[#2b0c14] text-[13px] font-medium placeholder:text-[#ab978b]" />
+                  <div ref={passwordContainerRef} className="relative flex-1 flex items-center min-w-0">
+                    <input
+                      ref={passwordInputRef}
+                      id="staff-password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        requestAnimationFrame(() => passwordCaret.updateCaret(event.target));
+                      }}
+                      onFocus={(event) => {
+                        requestAnimationFrame(() => passwordCaret.updateCaret(event.target));
+                      }}
+                      onBlur={() => passwordCaret.hideCaret()}
+                      onKeyUp={(event) => {
+                        requestAnimationFrame(() => passwordCaret.updateCaret(event.target));
+                      }}
+                      onClick={(event) => {
+                        requestAnimationFrame(() => passwordCaret.updateCaret(event.target));
+                      }}
+                      required
+                      autoComplete="current-password"
+                      className="w-full bg-transparent border-none outline-none text-[#2b0c14] text-[13px] font-medium placeholder:text-[#ab978b]"
+                      style={{ caretColor: 'transparent' }}
+                    />
+                    <span ref={passwordMeasureRef} aria-hidden="true" className="input-measure-span" />
+                    <span
+                      className={`animated-caret ${passwordCaret.isTyping ? 'typing' : 'blinking'}`}
+                      style={{
+                        transform: `translateX(${passwordCaret.caretX}px) translateY(-50%)`,
+                        opacity: passwordCaret.caretOpacity,
+                        backgroundColor: '#caa050',
+                      }}
+                      aria-hidden="true"
+                    />
+                  </div>
                   <button className="password-toggle p-1 text-[#9c8272] hover:text-[#5a0c1e] transition-colors" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
               <div className="form-options flex justify-end text-xs -mt-1">
-                <a href="#forgot-password" onClick={(event) => event.preventDefault()} className="text-[#9a6a24] font-bold hover:text-[#5a0c1e] transition-colors">Forgot password?</a>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotModalOpen(true)}
+                  className="text-[#9a6a24] font-bold hover:text-[#5a0c1e] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                >
+                  Forgot password?
+                </button>
               </div>
               <button className="sign-in-button w-full h-11 sm:h-[46px] flex items-center justify-center gap-2 rounded-xl text-white font-extrabold text-[13.5px] tracking-wide shadow-[0_6px_16px_rgba(79,10,27,0.25)] bg-gradient-to-r from-[#63081e] via-[#4d0617] to-[#3a0411] hover:from-[#760c25] hover:to-[#450514] active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed" type="submit" disabled={submitting}>
                 {submitting ? (
@@ -283,6 +394,17 @@ export const LoginPage = () => {
               <span className="flex-1 h-[1px] bg-[#decbb7]/40" />
             </div>
           </section>
+
+          <ForgotPasswordModal
+            isOpen={isForgotModalOpen}
+            onClose={() => setIsForgotModalOpen(false)}
+            onPasswordResetSuccess={(resetEmail) => {
+              if (resetEmail) {
+                setEmail(resetEmail);
+              }
+              setResetSuccessMessage('Password reset successfully! Please sign in with your new password.');
+            }}
+          />
 
           <div className="workspace-footnote mt-2.5 text-center text-[#a79587] text-[8.5px] font-semibold tracking-wide">
             © {CURRENT_YEAR} Aeterna One <span className="text-[#c69b53] mx-1">·</span> Secure access for authorised team members

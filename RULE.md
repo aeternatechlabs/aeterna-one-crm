@@ -1,4 +1,4 @@
-# Rules
+﻿# Rules
 
 1. **Do NOT start or stop the server** unless explicitly told to by the user.
 2. **Do NOT run commands** that modify the system (e.g., `taskkill`, `npm install`) without user permission.

@@ -25,3 +25,10 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Local Storage Vault (Offline/Sandbox Object Storage)
+storage_vault/
+server/storage_vault/
+
+# User Reference Codebase (Read-Only)
+Management-software/

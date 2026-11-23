@@ -89,6 +89,70 @@
   --amber: var(--color-warning);
   --red: var(--color-danger);
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Global Scrollbar Theme Design Tokens */
+  --scrollbar-size: 7px;
+  --scrollbar-thumb: rgba(123, 14, 41, 0.25);
+  --scrollbar-thumb-hover: var(--color-maroon-700);
+  --scrollbar-thumb-active: var(--color-maroon-900);
+  --scrollbar-track: transparent;
+}
+
+/* ==========================================================================
+   Global Theme Scrollbar Styling (Vertical & Horizontal)
+   Replaces default blocky OS scrollbars with sleek Karnataka heritage theme
+   (Royal Maroon & Warm Amber/Gold thumb with rounded pill styling).
+   ========================================================================== */
+
+/* Standard CSS Scrollbars (Firefox & Modern Standards) */
+html,
+body,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* WebKit / Chromium / Edge / Safari Global Scrollbars */
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size); /* For horizontal scrollbars */
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Utility class to hide scrollbars on targeted overflow containers while preserving scrollability */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 * {

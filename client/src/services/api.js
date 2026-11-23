@@ -9,6 +9,33 @@ const api = axios.create({
   },
 });
 
+// Request interceptor: sanitize headers, attach Bearer token, and prepare payload
+api.interceptors.request.use(
+  (config) => {
+    // Cross-origin token fallback (guarantees auth works on Vercel without 3rd-party cookie blockage)
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('aeterna_token') : null;
+      if (token && !config.headers['Authorization']) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (_) {}
+
+    const method = config.method?.toLowerCase();
+    if (['get', 'head'].includes(method) || (method === 'delete' && !config.data)) {
+      if (config.headers) {
+        delete config.headers['Content-Type'];
+        delete config.headers['content-type'];
+      }
+    } else if (['post', 'put', 'patch'].includes(method)) {
+      if (config.data === undefined || config.data === null) {
+        config.data = {};
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response interceptor: handle 401 unauthorized & automatic token refresh
 api.interceptors.response.use(
   (response) => response,
@@ -23,11 +50,18 @@ api.interceptors.response.use(
     ) {
       originalRequest._retry = true;
       try {
-        await api.post('/auth/refresh');
+        const storedRefreshToken = typeof window !== 'undefined' ? localStorage.getItem('aeterna_refresh_token') : null;
+        const refreshRes = await api.post('/auth/refresh', storedRefreshToken ? { refreshToken: storedRefreshToken } : {});
+        const newToken = refreshRes?.data?.token || refreshRes?.token;
+        if (newToken && typeof window !== 'undefined') {
+          localStorage.setItem('aeterna_token', newToken);
+        }
         return api(originalRequest);
       } catch (refreshErr) {
-        if (!window.location.pathname.includes('/login')) {
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           localStorage.removeItem('aeterna_user');
+          localStorage.removeItem('aeterna_token');
+          localStorage.removeItem('aeterna_refresh_token');
         }
         return Promise.reject(refreshErr);
       }
@@ -35,8 +69,10 @@ api.interceptors.response.use(
 
     if (error.response && error.response.status === 401) {
       // Clear authenticated user cache if session expired or invalid
-      if (!window.location.pathname.includes('/login')) {
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
         localStorage.removeItem('aeterna_user');
+        localStorage.removeItem('aeterna_token');
+        localStorage.removeItem('aeterna_refresh_token');
       }
     }
     return Promise.reject(error);

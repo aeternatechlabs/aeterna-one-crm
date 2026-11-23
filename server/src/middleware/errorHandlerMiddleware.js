@@ -18,6 +18,11 @@ const errorHandler = (err, req, res, next) => {
 
   // 1. Handle Malformed JSON SyntaxError from body-parser
   if (err instanceof SyntaxError && (statusCode === 400 || err.status === 400) && 'body' in err) {
+    const raw = typeof err.body === 'string' ? err.body.trim() : err.body;
+    if (!raw || raw === 'null' || raw === 'undefined' || raw === '{}' || raw === '') {
+      req.body = {};
+      return next();
+    }
     statusCode = 400;
     code = ERROR_CATEGORIES.INVALID_JSON;
     if (!message || message.includes('Unexpected token') || message.includes('JSON')) {

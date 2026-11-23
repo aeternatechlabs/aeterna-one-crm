@@ -33,7 +33,7 @@ export const authService = {
    */
   async logout() {
     try {
-      await api.post('/auth/logout');
+      await api.post('/auth/logout', {});
     } finally {
       localStorage.removeItem('aeterna_user');
     }
@@ -43,7 +43,7 @@ export const authService = {
    * Refresh session tokens
    */
   async refreshToken() {
-    const response = await api.post('/auth/refresh');
+    const response = await api.post('/auth/refresh', {});
     return response.data;
   },
 
@@ -52,6 +52,51 @@ export const authService = {
    */
   async checkHealth() {
     const response = await api.get('/health');
+    return response.data;
+  },
+
+  /**
+   * Check or simulate permission check with backend
+   * @param {Object} payload - { resource, action, simulatedRole, enforce }
+   */
+  async checkPermission(payload) {
+    const response = await api.post('/auth/check-permission', payload);
+    return response.data;
+  },
+
+  /**
+   * Get full permission matrix from backend
+   */
+  async getPermissionsMatrix() {
+    const response = await api.get('/auth/permissions-matrix');
+    return response.data;
+  },
+
+  /**
+   * Step 1: Request 6-digit password reset OTP
+   * @param {string} email
+   */
+  async forgotPassword(email) {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  /**
+   * Step 2: Verify 6-digit password reset OTP
+   * @param {string} email
+   * @param {string} otp
+   */
+  async verifyResetOTP(email, otp) {
+    const response = await api.post('/auth/verify-reset-otp', { email, otp });
+    return response.data;
+  },
+
+  /**
+   * Step 3: Complete password reset with new password
+   * @param {Object} payload - { email, resetToken, newPassword, confirmPassword }
+   */
+  async resetPassword(payload) {
+    const response = await api.post('/auth/reset-password', payload);
     return response.data;
   },
 };
