@@ -15,6 +15,11 @@ const {
 } = require('../../utils/devilWrapper');
 const { JWT, ROLES, BRANCHES } = require('../../config/constants');
 const {
+  checkRotatedTokenReuse,
+  recordRotatedToken,
+  clearRotatedTokensForTesting,
+} = require('./tokenTracker');
+const {
   ROLE_LABELS,
   ROLE_DESCRIPTIONS,
   ROLE_PERMISSIONS,
@@ -50,27 +55,49 @@ const verifyDeveloperKey = (devKey) => {
 /**
  * Sign JWT token for user (Fail-Closed if JWT_SECRET missing)
  * SEC-04: Embeds current tokenVersion to support instant session invalidation
+ * SEC-VULN-10: Short-lived access token (15m), single-use refresh token rotation with
+ * unique tokenId, explicit type separation, and absolute session tracking (sessionCreatedAt).
  */
-const createTokens = (user) => {
+const createTokens = (user, sessionCreatedAt = null) => {
   const jwtSecret = process.env.JWT_SECRET;
   if (!jwtSecret) {
     throw new ApiError(500, 'Server configuration error: JWT_SECRET is not configured.');
   }
 
   const tokenVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const sessionStartedAt =
+    sessionCreatedAt !== null && sessionCreatedAt !== undefined
+      ? Number(sessionCreatedAt)
+      : nowSeconds;
 
   const accessToken = jwt.sign(
-    { id: user._id, role: user.role, branch: user.branch, tokenVersion },
+    {
+      id: user._id,
+      role: user.role,
+      branch: user.branch,
+      tokenVersion,
+      mustChangePassword: Boolean(user.mustChangePassword),
+      type: 'access',
+    },
     jwtSecret,
     { expiresIn: JWT.ACCESS_EXPIRES_IN }
   );
+
+  const tokenId = crypto.randomUUID();
   const refreshToken = jwt.sign(
-    { id: user._id, tokenVersion },
+    {
+      id: user._id,
+      tokenVersion,
+      sessionCreatedAt: sessionStartedAt,
+      tokenId,
+      type: 'refresh',
+    },
     jwtSecret,
     { expiresIn: JWT.REFRESH_EXPIRES_IN }
   );
 
-  return { accessToken, refreshToken };
+  return { accessToken, refreshToken, tokenId, sessionCreatedAt: sessionStartedAt };
 };
 
 /**
@@ -290,6 +317,7 @@ const login = asyncHandler(async (req, res) => {
   delete safeUser.failedLoginAttempts;
   delete safeUser.lockUntil;
   delete safeUser.__v;
+  safeUser.mustChangePassword = Boolean(user.mustChangePassword);
 
   res.status(200).json(
     new ApiResponse(200, {
@@ -370,6 +398,8 @@ const logout = asyncHandler(async (req, res) => {
 /**
  * Refresh access token
  * POST /api/v1/auth/refresh
+ * SEC-VULN-10: Enforces refresh token rotation, reuse detection with concurrent grace window,
+ * absolute session expiration (30 days maximum), and token type separation.
  */
 const refresh = asyncHandler(async (req, res) => {
   const jwtSecret = process.env.JWT_SECRET;
@@ -395,6 +425,11 @@ const refresh = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Invalid or expired refresh token.');
   }
 
+  // SEC-VULN-10: Token type separation - ensure access tokens cannot be used to refresh
+  if (decoded.type && decoded.type !== 'refresh') {
+    throw new ApiError(401, 'Invalid token type: expected a refresh token.');
+  }
+
   const user = await User.findById(decoded.id).select('-password');
   if (!user) {
     throw new ApiError(401, 'Authenticated user no longer exists.');
@@ -411,13 +446,17 @@ const refresh = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Refresh token has been revoked or expired. Please log in again.');
   }
 
-  const { accessToken, refreshToken: newRefreshToken } = createTokens(user);
-
-  if (setTokenCookies && typeof setTokenCookies === 'function') {
-    try {
-      setTokenCookies(res, accessToken, newRefreshToken);
-    } catch (_) {}
+  // SEC-VULN-10: Absolute Session Lifetime Enforcement (30 days maximum)
+  const sessionCreatedAt = decoded.sessionCreatedAt || decoded.iat || Math.floor(Date.now() / 1000);
+  const absoluteMaxSeconds = (JWT.ABSOLUTE_SESSION_EXPIRES_IN_DAYS || 30) * 24 * 60 * 60;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (nowSeconds - sessionCreatedAt > absoluteMaxSeconds) {
+    throw new ApiError(401, 'Absolute session lifetime (30 days) has expired. Please log in again.');
   }
+
+  // SEC-VULN-10: Refresh Token Rotation & Reuse Detection
+  const tokenKey = decoded.tokenId || crypto.createHash('sha256').update(String(token)).digest('hex');
+  const rotationCheck = checkRotatedTokenReuse(tokenKey);
 
   const safeUser = exclude ? exclude(user.toObject(), ['password', '__v']) : user.toObject();
   delete safeUser.password;
@@ -426,10 +465,53 @@ const refresh = asyncHandler(async (req, res) => {
   delete safeUser.tokenVersion;
   delete safeUser.__v;
 
+  if (rotationCheck.isConcurrentReplay) {
+    // Within grace window (concurrent network requests / rapid retries):
+    // Replay the already-rotated token set so in-flight requests succeed safely
+    if (setTokenCookies && typeof setTokenCookies === 'function') {
+      try {
+        setTokenCookies(res, rotationCheck.tokens.accessToken, rotationCheck.tokens.refreshToken);
+      } catch (_) {}
+    }
+
+    return res.status(200).json(
+      new ApiResponse(200, {
+        message: 'Token refreshed successfully',
+        token: rotationCheck.tokens.accessToken,
+        refreshToken: rotationCheck.tokens.refreshToken,
+        user: safeUser,
+      })
+    );
+  }
+
+  if (rotationCheck.isReused) {
+    // Reuse detected outside grace period! Invalidate user session immediately
+    await User.updateOne({ _id: user._id }, { $inc: { tokenVersion: 1 } });
+    throw new ApiError(401, 'Invalid or expired refresh token: token reuse detected. Please log in again.');
+  }
+
+  // Issue new rotated token pair preserving original sessionCreatedAt
+  const { accessToken, refreshToken: newRefreshToken } = createTokens(user, sessionCreatedAt);
+
+  // Record old token as rotated
+  recordRotatedToken(tokenKey, {
+    userId: String(user._id),
+    rotatedAt: Date.now(),
+    sessionCreatedAt,
+    tokens: { accessToken, refreshToken: newRefreshToken },
+  });
+
+  if (setTokenCookies && typeof setTokenCookies === 'function') {
+    try {
+      setTokenCookies(res, accessToken, newRefreshToken);
+    } catch (_) {}
+  }
+
   res.status(200).json(
     new ApiResponse(200, {
       message: 'Token refreshed successfully',
       token: accessToken,
+      refreshToken: newRefreshToken,
       user: safeUser,
     })
   );
@@ -532,17 +614,13 @@ const forgotPassword = asyncHandler(async (req, res) => {
   // Dispatch luxury email
   await sendPasswordResetOTP(user.email, otp, user.name);
 
-  const responsePayload = {
-    message: 'If an account exists with this email address, a 6-digit verification code has been dispatched.',
-    email: cleanEmail,
-  };
-
-  // Provide devOtp in development or test environment for automated testing
-  if (process.env.NODE_ENV !== 'production') {
-    responsePayload.devOtp = otp;
-  }
-
-  res.status(200).json(new ApiResponse(200, responsePayload));
+  // SEC-VULN-05: Completely eliminate devOtp and plaintext OTP leakage across all environments.
+  // Maintain generic response structure to prevent user enumeration.
+  res.status(200).json(
+    new ApiResponse(200, {
+      message: 'If an account exists with this email address, a 6-digit verification code has been dispatched.',
+    })
+  );
 });
 
 /**
@@ -652,6 +730,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   // Update password and invalidate all existing sessions
   user.password = candidatePassword;
+  user.mustChangePassword = false;
   user.tokenVersion = (user.tokenVersion || 0) + 1;
   user.resetOTP = undefined;
   user.resetOTPExpires = undefined;
@@ -664,6 +743,75 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.status(200).json(
     new ApiResponse(200, {
       message: 'Password reset successful. All active sessions have been invalidated. Please log in with your new credentials.',
+    })
+  );
+});
+
+/**
+ * Change authenticated user password (Mandatory setup or routine change)
+ * POST /api/v1/auth/change-password
+ */
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body || {};
+
+  if (!currentPassword || !newPassword) {
+    throw new ApiError(400, 'Current password and new password are required.');
+  }
+
+  if (confirmPassword && newPassword !== confirmPassword) {
+    throw new ApiError(400, 'New password and confirmation password do not match.');
+  }
+
+  if (currentPassword === newPassword) {
+    throw new ApiError(400, 'New password must be different from current password.');
+  }
+
+  const policyCheck = validatePasswordComplexity(newPassword);
+  if (!policyCheck.valid) {
+    throw new ApiError(400, policyCheck.message);
+  }
+
+  // Retrieve user with password hash
+  const user = await User.findById(req.user._id).select('+password');
+  if (!user) {
+    throw new ApiError(404, 'User account not found.');
+  }
+
+  const isCurrentMatch = await user.matchPassword(currentPassword);
+  if (!isCurrentMatch) {
+    throw new ApiError(401, 'Current password is incorrect.');
+  }
+
+  // Update password and clear mustChangePassword state
+  user.password = newPassword;
+  user.mustChangePassword = false;
+  // pre-save hook automatically increments tokenVersion and hashes password
+  user.failedLoginAttempts = 0;
+  user.lockUntil = null;
+  await user.save();
+
+  // Issue fresh tokens for the new tokenVersion
+  const { accessToken, refreshToken } = createTokens(user);
+
+  if (setTokenCookies && typeof setTokenCookies === 'function') {
+    try {
+      setTokenCookies(res, accessToken, refreshToken);
+    } catch (_) {}
+  }
+
+  const safeUser = exclude ? exclude(user.toObject(), ['password', '__v']) : user.toObject();
+  delete safeUser.password;
+  delete safeUser.failedLoginAttempts;
+  delete safeUser.lockUntil;
+  delete safeUser.__v;
+  safeUser.mustChangePassword = false;
+
+  res.status(200).json(
+    new ApiResponse(200, {
+      message: 'Password changed successfully. Your account is now fully active.',
+      user: safeUser,
+      token: accessToken,
+      refreshToken,
     })
   );
 });
@@ -681,4 +829,6 @@ module.exports = {
   forgotPassword,
   verifyResetOTP,
   resetPassword,
+  changePassword,
+  clearRotatedTokensForTesting,
 };

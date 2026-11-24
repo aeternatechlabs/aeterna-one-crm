@@ -1,0 +1,4240 @@
+{
+  "info": {
+    "_postman_id": "aeterna-one-crm-role-based-collection-v2",
+    "name": "Aeterna One CRM — Comprehensive Role-Based API Collection",
+    "description": "Production Postman API collection for Aeterna One CRM backend (Render Live & Localhost). Features automatic session cookie & Bearer token extraction on login, organized by system roles (Super Admin, Branch Manager, Counsellor, Application Officer, Marketing Lead) based on the authoritative Role & Permission Matrix, including positive flows and negative 403 Forbidden security boundary verifications.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Automatically inject Authorization Bearer token & Cookie headers if token is present",
+          "const token = pm.collectionVariables.get('accessToken') || pm.collectionVariables.get('token');",
+          "if (token) {",
+          "    pm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + token });",
+          "    pm.request.headers.upsert({ key: 'Cookie', value: 'accessToken=' + token });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://aeterna-one-crm.onrender.com",
+      "type": "string"
+    },
+    {
+      "key": "localBaseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resetToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "superAdminEmail",
+      "value": "admin@aeterna.com",
+      "type": "string"
+    },
+    {
+      "key": "branchManagerEmail",
+      "value": "manager.bengaluru@aeterna.com",
+      "type": "string"
+    },
+    {
+      "key": "counsellorEmail",
+      "value": "counsellor.bengaluru@aeterna.com",
+      "type": "string"
+    },
+    {
+      "key": "applicationOfficerEmail",
+      "value": "admissions@aeterna.com",
+      "type": "string"
+    },
+    {
+      "key": "marketingEmail",
+      "value": "marketing@aeterna.com",
+      "type": "string"
+    },
+    {
+      "key": "defaultPassword",
+      "value": "Password@123",
+      "type": "string"
+    },
+    {
+      "key": "employeeId",
+      "value": "6afada000e1533f3f64c1801",
+      "type": "string"
+    },
+    {
+      "key": "leadId",
+      "value": "6afada000e1533f3f64c1802",
+      "type": "string"
+    },
+    {
+      "key": "studentId",
+      "value": "6afada000e1533f3f64c1822",
+      "type": "string"
+    },
+    {
+      "key": "institutionId",
+      "value": "6afada000e1533f3f64c1803",
+      "type": "string"
+    },
+    {
+      "key": "taskId",
+      "value": "6afada000e1533f3f64c1804",
+      "type": "string"
+    },
+    {
+      "key": "docId",
+      "value": "6afada000e1533f3f64c1805",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Public & Authentication Flow (All Users)",
+      "item": [
+        {
+          "name": "0.1 Root Health Check (/health)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ],
+              "query": []
+            },
+            "description": "Public liveness probe. Returns 200 OK when service and database are operational."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.2 API v1 Health Check (/api/v1/health)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health"
+              ],
+              "query": []
+            },
+            "description": "API v1 Health status. Includes timestamp, database connection status, supported branches, and API version."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.3 Login as Super Admin (Auto-Save Token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Authenticates Super Admin and automatically sets collection variables {{accessToken}} and {{refreshToken}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superAdminEmail}}\",\n  \"password\": \"{{defaultPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    var token = res.token || (res.data && res.data.token);",
+                  "    var refreshToken = res.refreshToken || (res.data && res.data.refreshToken);",
+                  "    if (token) {",
+                  "        pm.collectionVariables.set(\"accessToken\", token);",
+                  "        pm.collectionVariables.set(\"token\", token);",
+                  "        console.log(\"✓ Access Token automatically stored:\", token.substring(0, 15) + \"...\");",
+                  "    }",
+                  "    if (refreshToken) {",
+                  "        pm.collectionVariables.set(\"refreshToken\", refreshToken);",
+                  "        console.log(\"✓ Refresh Token automatically stored\");",
+                  "    }",
+                  "    pm.test(\"Status is 200 OK and Session Token Stored\", function() {",
+                  "        pm.expect(pm.response.code).to.equal(200);",
+                  "        pm.expect(token).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.4 Login as Branch Manager (Auto-Save Token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Authenticates Branch Manager and automatically updates {{accessToken}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{branchManagerEmail}}\",\n  \"password\": \"{{defaultPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    var token = res.token || (res.data && res.data.token);",
+                  "    var refreshToken = res.refreshToken || (res.data && res.data.refreshToken);",
+                  "    if (token) {",
+                  "        pm.collectionVariables.set(\"accessToken\", token);",
+                  "        pm.collectionVariables.set(\"token\", token);",
+                  "        console.log(\"✓ Access Token automatically stored:\", token.substring(0, 15) + \"...\");",
+                  "    }",
+                  "    if (refreshToken) {",
+                  "        pm.collectionVariables.set(\"refreshToken\", refreshToken);",
+                  "        console.log(\"✓ Refresh Token automatically stored\");",
+                  "    }",
+                  "    pm.test(\"Status is 200 OK and Session Token Stored\", function() {",
+                  "        pm.expect(pm.response.code).to.equal(200);",
+                  "        pm.expect(token).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.5 Login as Education Counsellor (Auto-Save Token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Authenticates Education Counsellor and updates {{accessToken}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{counsellorEmail}}\",\n  \"password\": \"{{defaultPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    var token = res.token || (res.data && res.data.token);",
+                  "    var refreshToken = res.refreshToken || (res.data && res.data.refreshToken);",
+                  "    if (token) {",
+                  "        pm.collectionVariables.set(\"accessToken\", token);",
+                  "        pm.collectionVariables.set(\"token\", token);",
+                  "        console.log(\"✓ Access Token automatically stored:\", token.substring(0, 15) + \"...\");",
+                  "    }",
+                  "    if (refreshToken) {",
+                  "        pm.collectionVariables.set(\"refreshToken\", refreshToken);",
+                  "        console.log(\"✓ Refresh Token automatically stored\");",
+                  "    }",
+                  "    pm.test(\"Status is 200 OK and Session Token Stored\", function() {",
+                  "        pm.expect(pm.response.code).to.equal(200);",
+                  "        pm.expect(token).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.6 Login as Application Officer (Auto-Save Token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Authenticates Application Officer and updates {{accessToken}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{applicationOfficerEmail}}\",\n  \"password\": \"{{defaultPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    var token = res.token || (res.data && res.data.token);",
+                  "    var refreshToken = res.refreshToken || (res.data && res.data.refreshToken);",
+                  "    if (token) {",
+                  "        pm.collectionVariables.set(\"accessToken\", token);",
+                  "        pm.collectionVariables.set(\"token\", token);",
+                  "        console.log(\"✓ Access Token automatically stored:\", token.substring(0, 15) + \"...\");",
+                  "    }",
+                  "    if (refreshToken) {",
+                  "        pm.collectionVariables.set(\"refreshToken\", refreshToken);",
+                  "        console.log(\"✓ Refresh Token automatically stored\");",
+                  "    }",
+                  "    pm.test(\"Status is 200 OK and Session Token Stored\", function() {",
+                  "        pm.expect(pm.response.code).to.equal(200);",
+                  "        pm.expect(token).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.7 Login as Marketing Lead (Auto-Save Token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Authenticates Marketing Lead and updates {{accessToken}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{marketingEmail}}\",\n  \"password\": \"{{defaultPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    var token = res.token || (res.data && res.data.token);",
+                  "    var refreshToken = res.refreshToken || (res.data && res.data.refreshToken);",
+                  "    if (token) {",
+                  "        pm.collectionVariables.set(\"accessToken\", token);",
+                  "        pm.collectionVariables.set(\"token\", token);",
+                  "        console.log(\"✓ Access Token automatically stored:\", token.substring(0, 15) + \"...\");",
+                  "    }",
+                  "    if (refreshToken) {",
+                  "        pm.collectionVariables.set(\"refreshToken\", refreshToken);",
+                  "        console.log(\"✓ Refresh Token automatically stored\");",
+                  "    }",
+                  "    pm.test(\"Status is 200 OK and Session Token Stored\", function() {",
+                  "        pm.expect(pm.response.code).to.equal(200);",
+                  "        pm.expect(token).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.8 Get Current Profile (/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ],
+              "query": []
+            },
+            "description": "Returns current user profile information based on active token."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.9 Refresh Session Token (/auth/refresh)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ],
+              "query": []
+            },
+            "description": "Refreshes expired access token using refreshToken and updates {{accessToken}}.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    var token = res.token || (res.data && res.data.token);",
+                  "    if (token) {",
+                  "        pm.collectionVariables.set(\"accessToken\", token);",
+                  "        pm.collectionVariables.set(\"token\", token);",
+                  "        console.log(\"✓ Access Token renewed via refresh token\");",
+                  "    }",
+                  "    pm.test(\"Status is 200 OK - Token Renewed\", function() {",
+                  "        pm.expect(pm.response.code).to.equal(200);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.10 Forgot Password Step 1: Request 6-Digit OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "forgot-password"
+              ],
+              "query": []
+            },
+            "description": "Generates unguessable 6-digit bcrypt-hashed OTP with 15-minute validity window and dispatches email.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@aeterna.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.11 Forgot Password Step 2: Verify OTP Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/verify-reset-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-reset-otp"
+              ],
+              "query": []
+            },
+            "description": "Verifies 6-digit OTP code and returns single-use 32-byte crypto reset token (stored in {{resetToken}}).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@aeterna.com\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var res = pm.response.json();",
+                  "    var resetToken = res.resetToken || (res.data && res.data.resetToken);",
+                  "    if (resetToken) {",
+                  "        pm.collectionVariables.set(\"resetToken\", resetToken);",
+                  "        console.log(\"✓ 32-byte Reset Token stored for Step 3 password update\");",
+                  "    }",
+                  "    pm.test(\"Status is 200 OK - OTP Verified\", function() {",
+                  "        pm.expect(pm.response.code).to.equal(200);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.12 Forgot Password Step 3: Set New Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ],
+              "query": []
+            },
+            "description": "Sets new password using resetToken, enforces password complexity, and increments tokenVersion to terminate old sessions.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@aeterna.com\",\n  \"resetToken\": \"{{resetToken}}\",\n  \"newPassword\": \"NewSecurePassword@2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.13 Logout (/auth/logout)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ],
+              "query": []
+            },
+            "description": "Clears server-side authentication cookies and invalidates session.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200 OK\", function() {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. 👑 Super Admin (Full System & Governance)",
+      "item": [
+        {
+          "name": "1.1 Staff & Employee Management (Super Admin Exclusive)",
+          "item": [
+            {
+              "name": "List Active Staff Directory",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees?page=1&limit=10&search=&branch=all&status=active",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": ""
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": ""
+                    },
+                    {
+                      "key": "branch",
+                      "value": "all",
+                      "description": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": "active",
+                      "description": ""
+                    }
+                  ]
+                },
+                "description": "Lists active staff across all Karnataka branches. Super Admin only."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Provision New Staff Employee",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees"
+                  ],
+                  "query": []
+                },
+                "description": "Creates new employee profile and provisions login User credentials automatically. Super Admin role is strictly forbidden from creation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"first_name\": \"Kavita\",\n  \"last_name\": \"Hegde\",\n  \"official_email\": \"kavita.hegde@aeterna.com\",\n  \"phone\": \"+91 98451 22334\",\n  \"employee_code\": \"AET-BLR-EMP7124\",\n  \"joining_date\": \"2026-11-20\",\n  \"branch\": \"bengaluru\",\n  \"role\": \"counsellor\",\n  \"department\": \"Education Counselling\",\n  \"designation\": \"Senior Admissions Counsellor\",\n  \"employment_status\": \"Full-Time\",\n  \"password\": \"Password@123\",\n  \"address\": \"Indiranagar, Bengaluru, Karnataka\",\n  \"emergency_contact_name\": \"Suresh Hegde\",\n  \"emergency_contact_phone\": \"+91 98451 99887\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Employee Details by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees/{{employeeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees",
+                    "{{employeeId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Fetches complete employee record by ID."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Employee Record",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees/{{employeeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees",
+                    "{{employeeId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Updates employee metadata.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"designation\": \"Lead Overseas Education Consultant\",\n  \"phone\": \"+91 98451 99999\",\n  \"department\": \"Student Counselling\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Toggle Employee Active Status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees/{{employeeId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees",
+                    "{{employeeId}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Toggles employment active state. Automatically invalidates JWT session on deactivation.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"isActive\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Move Employee to Trash Vault (Soft Delete)",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees/{{employeeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees",
+                    "{{employeeId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Soft-deletes employee into dedicated Trash Vault with audit reason.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Resigned to pursue higher studies in UK. Offboarding completed.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List Archived Staff Vault (/employees/trash)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees/trash?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees",
+                    "trash"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": ""
+                    }
+                  ]
+                },
+                "description": "Lists decommissioned personnel in Trash Vault."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Restore Staff from Trash Vault",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees/{{employeeId}}/restore",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees",
+                    "{{employeeId}}",
+                    "restore"
+                  ],
+                  "query": []
+                },
+                "description": "Restores employee from trash vault back into active staff directory.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Permanently Purge Employee Record",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees/{{employeeId}}/permanent",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees",
+                    "{{employeeId}}",
+                    "permanent"
+                  ],
+                  "query": []
+                },
+                "description": "Permanently purges employee and linked user account from database.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1.2 Institutions Master Directory (/institutions)",
+          "item": [
+            {
+              "name": "List All Institutions Directory",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/institutions?page=1&limit=15&type=all&branch=all",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "institutions"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "15",
+                      "description": ""
+                    },
+                    {
+                      "key": "type",
+                      "value": "all",
+                      "description": ""
+                    },
+                    {
+                      "key": "branch",
+                      "value": "all",
+                      "description": ""
+                    }
+                  ]
+                },
+                "description": "Lists schools, colleges, and coaching centers with search and filters."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Institutions Directory Summary Stats",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/institutions/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "institutions",
+                    "stats"
+                  ],
+                  "query": []
+                },
+                "description": "Aggregate counts across feeder schools, colleges, coaching academies, and active partnerships."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Feeder School Record",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/institutions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "institutions"
+                  ],
+                  "query": []
+                },
+                "description": "Adds new institution record into directory.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Bengaluru International School & Academy 7124\",\n  \"institution_type\": \"school\",\n  \"category\": \"CBSE / IB World School\",\n  \"board_or_affiliation\": \"IB & Cambridge Assessment\",\n  \"branch\": \"bengaluru\",\n  \"city\": \"Bengaluru\",\n  \"state\": \"Karnataka\",\n  \"address\": \"Hennur Bagalur Main Road, Bengaluru\",\n  \"contact_person\": {\n    \"name\": \"Dr. Sunita Kulkarni\",\n    \"designation\": \"Dean of International Placement\",\n    \"phone\": \"+91 98450 11223\",\n    \"email\": \"placement@bisacademy.org\"\n  },\n  \"target_destinations\": [\n    \"USA\",\n    \"UK\",\n    \"Canada\",\n    \"Australia\"\n  ],\n  \"partnership_status\": \"Active MoU\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Institution Details",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/institutions/{{institutionId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "institutions",
+                    "{{institutionId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Updates institution details.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"partnership_status\": \"Partner\",\n  \"student_intake_capacity\": \"120 candidates\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Delete Institution Record",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/institutions/{{institutionId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "institutions",
+                    "{{institutionId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Deletes institution record."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1.3 Executive Reports & Analytics (/reports)",
+          "item": [
+            {
+              "name": "Executive Overview KPIs (/reports/overview)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/reports/overview",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports",
+                    "overview"
+                  ],
+                  "query": []
+                },
+                "description": "High-level management summary: total leads, conversion rate, revenue, pipeline health."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Branch Scorecards (/reports/branch-scorecards)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/reports/branch-scorecards",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports",
+                    "branch-scorecards"
+                  ],
+                  "query": []
+                },
+                "description": "Comparative metrics across Bengaluru HQ, Mysuru, and Belagavi branches."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "16-Stage Admissions Funnel (/reports/conversion-funnel)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/reports/conversion-funnel",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports",
+                    "conversion-funnel"
+                  ],
+                  "query": []
+                },
+                "description": "Waterfall conversion analytics across all 16 pipeline stages."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Counsellor Productivity Leaderboard (/reports/counsellor-productivity)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/reports/counsellor-productivity",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports",
+                    "counsellor-productivity"
+                  ],
+                  "query": []
+                },
+                "description": "Counsellor velocity rankings, calls made, conversions closed, SLA compliance."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Intake & Destination Forecasting (/reports/intake-forecasting)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/reports/intake-forecasting",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports",
+                    "intake-forecasting"
+                  ],
+                  "query": []
+                },
+                "description": "Predictive intake volume for Fall 2026/Spring 2027 by target destination country."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1.4 Cloud Integrations & System Settings (/settings)",
+          "item": [
+            {
+              "name": "Get Integrations Status & Storage Metrics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/settings/integrations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "settings",
+                    "integrations"
+                  ],
+                  "query": []
+                },
+                "description": "Retrieves Cloudflare R2 and Brevo configuration summaries and document metrics."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Test Brevo Transactional Email Dispatch",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/settings/test-email",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "settings",
+                    "test-email"
+                  ],
+                  "query": []
+                },
+                "description": "Sends live test email via Brevo transactional engine to verify SMTP/REST connectivity.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"testEmail\": \"admin@aeterna.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Test Cloudflare R2 Storage Connection Ping",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/settings/test-storage",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "settings",
+                    "test-storage"
+                  ],
+                  "query": []
+                },
+                "description": "Performs live write, read, and delete healthcheck on Cloudflare R2 bucket and returns latency in ms."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1.5 System Access & RBAC Inspector (/auth)",
+          "item": [
+            {
+              "name": "Get System Role Permissions Matrix",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/permissions-matrix",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "permissions-matrix"
+                  ],
+                  "query": []
+                },
+                "description": "Authoritative canonical 5-role permission matrix across all CRM resources and actions."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Check / Simulate Role Permission",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/check-permission",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "check-permission"
+                  ],
+                  "query": []
+                },
+                "description": "Simulates or verifies permission for a given role against the server security engine.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"resource\": \"settings\",\n  \"action\": \"manageStaff\",\n  \"simulatedRole\": \"super_admin\",\n  \"enforce\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. 🏢 Branch Manager (Branch-Level Operations & Supervision)",
+      "item": [
+        {
+          "name": "2.1 Allowed Operations (Branch Scoped)",
+          "item": [
+            {
+              "name": "View Branch Leads (/leads)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/leads?page=1&limit=10&branch=bengaluru",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "leads"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": ""
+                    },
+                    {
+                      "key": "branch",
+                      "value": "bengaluru",
+                      "description": ""
+                    }
+                  ]
+                },
+                "description": "Lists leads contained within manager's assigned branch."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Ingest New Lead into Branch",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/leads",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "leads"
+                  ],
+                  "query": []
+                },
+                "description": "Ingests new inquiry and assigns to branch.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Sanjay Gowda\",\n  \"phone_number\": \"+91 98450 87125\",\n  \"email\": \"sanjay.gowda@gmail.com\",\n  \"branch\": \"bengaluru\",\n  \"source\": \"Google Ads\",\n  \"destination_country\": \"Germany\",\n  \"study_level\": \"Postgraduate (MS)\",\n  \"intake_target\": \"Winter 2026\",\n  \"priority\": \"high\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Lead Status & Record Follow-up",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/leads/{{leadId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "leads",
+                    "{{leadId}}",
+                    "status"
+                  ],
+                  "query": []
+                },
+                "description": "Updates lead status and schedules follow-up.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"Contacted - Discussion Ongoing\",\n  \"follow_up_date\": \"2026-11-25\",\n  \"follow_up_time\": \"15:00\",\n  \"disposition_notes\": \"Candidate interested in TU Munich MSc Computer Science. Scheduled counselling.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Convert Lead to Admissions Pipeline",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/leads/{{leadId}}/convert",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "leads",
+                    "{{leadId}}",
+                    "convert"
+                  ],
+                  "query": []
+                },
+                "description": "Converts lead into student pipeline candidate in stage NEW.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "View Branch Admissions Pipeline Kanban",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/pipeline?branch=bengaluru",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "pipeline"
+                  ],
+                  "query": [
+                    {
+                      "key": "branch",
+                      "value": "bengaluru",
+                      "description": ""
+                    }
+                  ]
+                },
+                "description": "Returns 16-stage pipeline Kanban board for assigned branch."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Move Candidate Pipeline Stage",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/pipeline/students/{{studentId}}/stage",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "pipeline",
+                    "students",
+                    "{{studentId}}",
+                    "stage"
+                  ],
+                  "query": []
+                },
+                "description": "Validates and transitions candidate along pipeline state machine.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"toStage\": \"counselling_completed\",\n  \"remarks\": \"Profile evaluation and destination shortlisted.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Verify Student Document Gate",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/vault/{{docId}}/verify",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "vault",
+                    "{{docId}}",
+                    "verify"
+                  ],
+                  "query": []
+                },
+                "description": "Approves mandatory document gate, advancing checklist towards Visa filing.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"isVerified\": true,\n  \"verificationNotes\": \"Passport verified against original copy. Name and validity match.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Soft Delete Document within Branch",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/vault/{{docId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "vault",
+                    "{{docId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Soft deletes obsolete document and purges file object from Cloudflare R2."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "View Branch Comparative Scorecard",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/reports/branch-scorecards",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports",
+                    "branch-scorecards"
+                  ],
+                  "query": []
+                },
+                "description": "Returns scorecard for assigned branch."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "2.2 🚫 Denied Operations (RBAC Security Probes — Expect 403)",
+          "item": [
+            {
+              "name": "[DENIED] Create Employee (Super Admin Only)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden. Branch Manager cannot provision staff.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"first_name\": \"Hacked\",\n  \"last_name\": \"Staff\",\n  \"official_email\": \"hacked@aeterna.com\",\n  \"role\": \"counsellor\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DENIED] Permanent Purge from Cloudflare R2",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/vault/{{docId}}/permanent",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "vault",
+                    "{{docId}}",
+                    "permanent"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden. Only Super Admin can permanently purge documents."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DENIED] View Executive All-Branches Overview",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/reports/overview",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports",
+                    "overview"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden if attempting cross-branch global analytics."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. 🎓 Education Counsellor (Candidate Guidance & Daily Reach-Out)",
+      "item": [
+        {
+          "name": "3.1 Allowed Operations",
+          "item": [
+            {
+              "name": "View Assigned Leads (/leads)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/leads?assigned_to=me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "leads"
+                  ],
+                  "query": [
+                    {
+                      "key": "assigned_to",
+                      "value": "me",
+                      "description": ""
+                    }
+                  ]
+                },
+                "description": "Lists leads assigned to the counsellor."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Lead Inquiry",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/leads",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "leads"
+                  ],
+                  "query": []
+                },
+                "description": "Adds new lead inquiry.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Deepa Raman\",\n  \"phone_number\": \"+91 99880 87125\",\n  \"email\": \"deepa.raman@gmail.com\",\n  \"branch\": \"bengaluru\",\n  \"source\": \"Campus Walk-in\",\n  \"destination_country\": \"UK\",\n  \"study_level\": \"Undergraduate (BSc)\",\n  \"priority\": \"high\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "View Assigned Pipeline Students",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/pipeline",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "pipeline"
+                  ],
+                  "query": []
+                },
+                "description": "Returns pipeline students assigned to counsellor."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Progress Pipeline Stage (Counselled -> Shortlisted)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/pipeline/students/{{studentId}}/stage",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "pipeline",
+                    "students",
+                    "{{studentId}}",
+                    "stage"
+                  ],
+                  "query": []
+                },
+                "description": "Transitions student to Shortlisted stage.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"toStage\": \"shortlisted\",\n  \"remarks\": \"Shortlisted 3 UK universities (Manchester, Leeds, Bristol).\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Student 360 Full Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Comprehensive student record (Academics, Tests, Shortlist, Applications)."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Student Academic Record",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/academics",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "academics"
+                  ],
+                  "query": []
+                },
+                "description": "Updates academic history.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"highest_qualification\": \"Bachelor of Engineering (CSE)\",\n  \"institution_name\": \"BMS College of Engineering, Bengaluru\",\n  \"year_of_passing\": 2025,\n  \"score_percentage\": \"84.5%\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Student Test Scores",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/tests",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "tests"
+                  ],
+                  "query": []
+                },
+                "description": "Updates standardized English & aptitude test scores.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ielts_overall\": 7.5,\n  \"ielts_listening\": 8,\n  \"ielts_reading\": 7.5,\n  \"ielts_writing\": 7,\n  \"ielts_speaking\": 7.5\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Add University to Student Shortlist",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/shortlist",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "shortlist"
+                  ],
+                  "query": []
+                },
+                "description": "Appends university to candidate shortlist.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"university_name\": \"University of Manchester\",\n  \"country\": \"UK\",\n  \"program\": \"MSc Advanced Computer Science\",\n  \"intake\": \"September 2026\",\n  \"tier\": \"Dream\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Browse Institutions Directory (/institutions)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/institutions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "institutions"
+                  ],
+                  "query": []
+                },
+                "description": "Counsellor searches partner colleges & feeder schools."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Daily 25-Task Velocity Queue",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tasks/daily-queue",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tasks",
+                    "daily-queue"
+                  ],
+                  "query": []
+                },
+                "description": "Fetches daily prioritized tasks for reach-outs."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Complete Task with 1-Tap Disposition",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tasks/{{taskId}}/complete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tasks",
+                    "{{taskId}}",
+                    "complete"
+                  ],
+                  "query": []
+                },
+                "description": "Completes task with mandatory remarks audit.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"outcome\": \"completed\",\n  \"remarks\": \"Connected over WhatsApp call. Sent Manchester course brochure. Student reviewing.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "3.2 🚫 Denied Operations (RBAC Security Probes — Expect 403)",
+          "item": [
+            {
+              "name": "[DENIED] Verify Student Document (AO/BM Only)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/vault/{{docId}}/verify",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "vault",
+                    "{{docId}}",
+                    "verify"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden. Counsellors cannot approve/verify documents.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"isVerified\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DENIED] Soft Delete Document (BM/Admin Only)",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/vault/{{docId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "vault",
+                    "{{docId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden. Counsellors cannot delete documents."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DENIED] Access Staff Directory (/employees)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden. Staff management is Super Admin exclusive."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DENIED] Access Executive Reports (/reports/overview)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/reports/overview",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "reports",
+                    "overview"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden. Counsellors cannot view high-level management reports."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. 📋 Application Officer (Document Gatekeeper & Filings)",
+      "item": [
+        {
+          "name": "4.1 Allowed Operations",
+          "item": [
+            {
+              "name": "Inspect Student Document Vault",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/vault",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "vault"
+                  ],
+                  "query": []
+                },
+                "description": "Lists all documents uploaded by student/counsellor."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Generate Signed Document Preview URL",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/vault/{{docId}}/preview",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "vault",
+                    "{{docId}}",
+                    "preview"
+                  ],
+                  "query": []
+                },
+                "description": "Generates secure HMAC-SHA256 signed or Cloudflare R2 presigned preview URL."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Generate Signed Document Download URL",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/vault/{{docId}}/download",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "vault",
+                    "{{docId}}",
+                    "download"
+                  ],
+                  "query": []
+                },
+                "description": "Generates secure download URL with attachment header."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Verify & Approve Mandatory Document Gate",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/vault/{{docId}}/verify",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "vault",
+                    "{{docId}}",
+                    "verify"
+                  ],
+                  "query": []
+                },
+                "description": "Approves document gate. Automatically advances pipeline documentsVerified gate.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"isVerified\": true,\n  \"verificationNotes\": \"Academic transcripts verified against university seal. Meets Tier 4 Visa requirements.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Reject Document with Correction Notice",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/vault/{{docId}}/verify",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "vault",
+                    "{{docId}}",
+                    "verify"
+                  ],
+                  "query": []
+                },
+                "description": "Rejects document gate with audit reason.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"isVerified\": false,\n  \"rejectionReason\": \"Passport scan is blurred on the biographical page. Please re-upload high resolution copy.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update University Application Filing Status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}/applications",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}",
+                    "applications"
+                  ],
+                  "query": []
+                },
+                "description": "Logs official application filing with foreign university portal.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"university_name\": \"University of Manchester\",\n  \"application_status\": \"Submitted to Portal\",\n  \"portal_application_id\": \"UOM-2026-9921\",\n  \"submission_date\": \"2026-11-23\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "4.2 🚫 Denied Operations (RBAC Security Probes — Expect 403)",
+          "item": [
+            {
+              "name": "[DENIED] Move Pipeline Stage (Counsellor/BM Only)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/pipeline/students/{{studentId}}/stage",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "pipeline",
+                    "students",
+                    "{{studentId}}",
+                    "stage"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden. Application Officer cannot change pipeline stage.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"toStage\": \"enrolled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DENIED] Delete Leads (/leads/:id)",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/leads/{{leadId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "leads",
+                    "{{leadId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden. Application Officer cannot delete lead records."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DENIED] Access Cloud Integrations Settings",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/settings/integrations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "settings",
+                    "integrations"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. 📢 Marketing Lead (Acquisition & Campaigns)",
+      "item": [
+        {
+          "name": "5.1 Allowed Operations",
+          "item": [
+            {
+              "name": "Ingest Multi-Channel Campaign Lead",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/leads",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "leads"
+                  ],
+                  "query": []
+                },
+                "description": "Ingests prospective inquiry from social ad campaigns.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Pooja Hegde\",\n  \"phone_number\": \"+91 97410 87125\",\n  \"email\": \"pooja.hegde@outlook.com\",\n  \"branch\": \"bengaluru\",\n  \"source\": \"Instagram Study in Australia Expo\",\n  \"destination_country\": \"Australia\",\n  \"study_level\": \"Postgraduate (MBA)\",\n  \"intake_target\": \"July 2026\",\n  \"priority\": \"high\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "View Marketing Leads & Channel Attribution",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/leads?page=1&limit=20&source=Instagram%20Study%20in%20Australia%20Expo",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "leads"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": ""
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": ""
+                    },
+                    {
+                      "key": "source",
+                      "value": "Instagram Study in Australia Expo",
+                      "description": ""
+                    }
+                  ]
+                },
+                "description": "Lists leads attributed to marketing campaigns."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "View Lead Acquisition Stats (/leads/stats)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/leads/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "leads",
+                    "stats"
+                  ],
+                  "query": []
+                },
+                "description": "Summary metrics on lead volumes, sources, and status breakdown."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 200 OK\", function() {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "5.2 🚫 Denied Operations (RBAC Security Probes — Expect 403)",
+          "item": [
+            {
+              "name": "[DENIED] Access Student 360 Vault (/students)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "{{studentId}}"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden. Marketing role has zero access to student documents."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DENIED] Access Admissions Pipeline Kanban",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/pipeline",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "pipeline"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DENIED] Access Staff Management (/employees)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/employees",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "employees"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "[DENIED] Access System Settings (/settings)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/settings/integrations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "settings",
+                    "integrations"
+                  ],
+                  "query": []
+                },
+                "description": "Expects 403 Forbidden."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status is 403 Forbidden (Strict RBAC Boundary Enforced)\", function() {",
+                      "    pm.expect(pm.response.code).to.equal(403);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

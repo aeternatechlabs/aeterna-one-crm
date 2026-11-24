@@ -28,6 +28,11 @@ const requireBranchAccess = (branchParamName = 'branch') => {
       return next();
     }
 
+    // Fail-Closed: Non-super-admin user must have a valid assigned branch
+    if (!userBranch || typeof userBranch !== 'string' || !userBranch.trim()) {
+      return next(new ApiError(403, 'Branch access denied: User account has no assigned branch.'));
+    }
+
     // Explicit branch requested in query, params, or body
     const rawRequested = req.query[branchParamName] || req.params[branchParamName] || req.body[branchParamName];
     const requestedBranch =
@@ -37,7 +42,7 @@ const requireBranchAccess = (branchParamName = 'branch') => {
         ? String(rawRequested)
         : null;
 
-    if (requestedBranch && requestedBranch !== userBranch && requestedBranch !== 'all') {
+    if (requestedBranch && requestedBranch !== userBranch) {
       return next(
         new ApiError(
           403,

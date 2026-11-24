@@ -5,6 +5,13 @@ const app = require('../../src/app');
  * Completely network-independent (0 TCP sockets, 0 sandbox restrictions).
  */
 function mockReqRes(options = {}) {
+  const socket = {
+    remoteAddress: options.remoteAddress || '127.0.0.1',
+    destroy() {},
+  };
+
+  const clientIp = options.ip || options.remoteAddress || '127.0.0.1';
+
   const req = {
     method: options.method || 'GET',
     url: options.url || '/',
@@ -16,6 +23,12 @@ function mockReqRes(options = {}) {
     cookies: options.cookies || {},
     user: options.user || null,
     branchScope: options.branchScope || null,
+    ip: clientIp,
+    socket,
+    connection: socket,
+    app: {
+      get: (k) => (k === 'trust proxy' ? false : undefined),
+    },
     ...options.req,
   };
 
@@ -37,7 +50,18 @@ function mockReqRes(options = {}) {
       return this;
     },
     setHeader(key, val) {
+      this.headers = this.headers || {};
       this.headers[key] = val;
+      this.headers[key.toLowerCase()] = val;
+    },
+    getHeader(key) {
+      this.headers = this.headers || {};
+      return this.headers[key] || this.headers[key.toLowerCase()];
+    },
+    removeHeader(key) {
+      this.headers = this.headers || {};
+      delete this.headers[key];
+      delete this.headers[key.toLowerCase()];
     },
     cookie(name, val, opts) {
       this.cookies = this.cookies || {};

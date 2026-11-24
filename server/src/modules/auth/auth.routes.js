@@ -11,6 +11,7 @@ const {
   forgotPassword,
   verifyResetOTP,
   resetPassword,
+  changePassword,
 } = require('./auth.controller');
 const { registerValidator, loginValidator } = require('./auth.validator');
 const { validate } = require('../../middleware/validateMiddleware');
@@ -29,6 +30,7 @@ router.post('/login', authLimiter, loginValidator, validate, login);
 router.post('/forgot-password', authLimiter, forgotPassword);
 router.post('/verify-reset-otp', authLimiter, verifyResetOTP);
 router.post('/reset-password', authLimiter, resetPassword);
+router.post('/change-password', authLimiter, protect, changePassword);
 router.post('/refresh', refreshLimiter, refresh);
 router.post('/logout', logout);
 router.get('/me', protect, getMe);

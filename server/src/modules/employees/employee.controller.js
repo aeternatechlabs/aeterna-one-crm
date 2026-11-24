@@ -1,8 +1,49 @@
+const crypto = require('crypto');
 const Employee = require('./employee.model');
 const User = require('../users/user.model');
 const { asyncHandler, ApiError, ApiResponse } = require('../../utils/devilWrapper');
 const { ROLES, BRANCHES } = require('../../config/constants');
 const { validatePasswordComplexity } = require('../../utils/passwordPolicy');
+
+/**
+ * Generates a cryptographically strong, unique temporary password that strictly meets
+ * the unified password policy:
+ * - 16 characters long
+ * - Minimum 2 uppercase letters
+ * - Minimum 2 digits
+ * - Minimum 2 special characters
+ * - Minimum 2 lowercase letters
+ * - Remaining 8 positions filled from full character pool and Fisher-Yates shuffled
+ */
+function generateSecureTemporaryPassword() {
+  const upperPool = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lowerPool = 'abcdefghijkmnopqrstuvwxyz';
+  const digitPool = '23456789';
+  const specialPool = '!@#$%^&*()_+-=';
+  const allPool = upperPool + lowerPool + digitPool + specialPool;
+
+  const chars = [
+    upperPool[crypto.randomInt(0, upperPool.length)],
+    upperPool[crypto.randomInt(0, upperPool.length)],
+    lowerPool[crypto.randomInt(0, lowerPool.length)],
+    lowerPool[crypto.randomInt(0, lowerPool.length)],
+    digitPool[crypto.randomInt(0, digitPool.length)],
+    digitPool[crypto.randomInt(0, digitPool.length)],
+    specialPool[crypto.randomInt(0, specialPool.length)],
+    specialPool[crypto.randomInt(0, specialPool.length)],
+  ];
+
+  for (let i = 0; i < 8; i++) {
+    chars.push(allPool[crypto.randomInt(0, allPool.length)]);
+  }
+
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(0, i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+
+  return chars.join('');
+}
 
 const DELETION_STAGES = {
   ACTIVE: 'ACTIVE',
@@ -256,11 +297,22 @@ const createEmployee = asyncHandler(async (req, res) => {
     throw new ApiError(409, `Employee with email ${cleanEmail} already exists.`);
   }
 
-  // 3. Prepare or validate password
-  const tempPassword = password && password.trim() ? password.trim() : 'Password@123';
-  const passCheck = validatePasswordComplexity(tempPassword);
-  if (!passCheck.valid) {
-    throw new ApiError(400, `Password policy error: ${passCheck.message}`);
+  // 3. Prepare or validate password (SEC-VULN-09 Hardened)
+  const hasProvidedPassword = Boolean(password && typeof password === 'string' && password.trim());
+  let initialPassword;
+  let isTemporary = false;
+
+  if (hasProvidedPassword) {
+    const cleanPassword = password.trim();
+    const passCheck = validatePasswordComplexity(cleanPassword);
+    if (!passCheck.valid) {
+      throw new ApiError(400, `Password policy error: ${passCheck.message}`);
+    }
+    initialPassword = cleanPassword;
+  } else {
+    // SEC-VULN-09: Eliminate predictable default 'Password@123'; generate unique cryptographically strong temporary password
+    initialPassword = generateSecureTemporaryPassword();
+    isTemporary = true;
   }
 
   // 4. Provision or sync User model
@@ -273,8 +325,9 @@ const createEmployee = asyncHandler(async (req, res) => {
     user.branch = branch;
     user.phone = contact_info.phone || user.phone;
     user.isActive = isUserActive;
-    if (password) {
-      user.password = tempPassword;
+    user.mustChangePassword = true;
+    if (hasProvidedPassword || isTemporary) {
+      user.password = initialPassword;
     }
     await user.save();
   } else {
@@ -289,11 +342,12 @@ const createEmployee = asyncHandler(async (req, res) => {
     user = await User.create({
       name: `${first_name.trim()} ${last_name.trim()}`,
       email: cleanEmail,
-      password: tempPassword,
+      password: initialPassword,
       role,
       branch,
       phone: contact_info.phone || undefined,
       isActive: isUserActive,
+      mustChangePassword: true,
     });
   }
 
@@ -320,13 +374,35 @@ const createEmployee = asyncHandler(async (req, res) => {
     user_id: user._id,
   });
 
+  // Asynchronously dispatch onboarding email with credentials/invitation
+  try {
+    const { sendEmployeeOnboardingEmail } = require('../../services/emailService');
+    if (typeof sendEmployeeOnboardingEmail === 'function') {
+      sendEmployeeOnboardingEmail({
+        toEmail: cleanEmail,
+        recipientName: `${first_name.trim()} ${last_name.trim()}`,
+        tempPassword: initialPassword,
+        role,
+        branch,
+        employeeCode: cleanCode,
+      }).catch(() => {});
+    }
+  } catch (_) {}
+
+  // 6. Response construction (SEC-VULN-09: never expose auto-generated temporary password in API response)
   const credentials = {
     email: cleanEmail,
-    password: tempPassword,
     role,
     branch,
     employee_code: cleanCode,
+    mustChangePassword: true,
   };
+
+  if (hasProvidedPassword) {
+    credentials.password = initialPassword;
+  } else {
+    credentials.temporaryPasswordDispatched = true;
+  }
 
   res.status(201).json(
     new ApiResponse(201, {

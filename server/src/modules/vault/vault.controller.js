@@ -1,3 +1,4 @@
+const path = require('path');
 const mongoose = require('mongoose');
 const Student = require('../students/student.model');
 const PipelineStudent = require('../pipeline/pipeline.model');
@@ -355,7 +356,7 @@ const getDownloadUrl = asyncHandler(async (req, res) => {
   });
 
   const r2PresignedUrl = isR2Configured()
-    ? generateR2PresignedUrl(document.storageKey, { expiresIn: 900 })
+    ? generateR2PresignedUrl(document.storageKey, { expiresIn: 900, disposition: 'attachment' })
     : null;
   const downloadUrl = r2PresignedUrl || `/api/v1/vault-storage/file?token=${token}`;
 
@@ -428,7 +429,7 @@ const getPreviewUrl = asyncHandler(async (req, res) => {
   });
 
   const r2PresignedUrl = isR2Configured()
-    ? generateR2PresignedUrl(document.storageKey, { expiresIn: 900 })
+    ? generateR2PresignedUrl(document.storageKey, { expiresIn: 900, disposition: 'inline' })
     : null;
   const previewUrl = r2PresignedUrl || `/api/v1/vault-storage/file?token=${token}`;
 
@@ -448,11 +449,15 @@ const getPreviewUrl = asyncHandler(async (req, res) => {
 });
 
 /**
- * 6. Serve Secure Storage File via Signed Token (Day 39)
+ * 6. Serve Secure Storage File via Signed Token (Day 39 & SEC-VULN-01)
  * GET /api/v1/vault-storage/file
  */
 const serveStorageFile = asyncHandler(async (req, res) => {
   const { token } = req.query;
+
+  if (!token || typeof token !== 'string') {
+    throw new ApiError(400, 'Storage access token is required');
+  }
 
   const verification = verifySignedDownloadToken(token);
   if (!verification.valid) {
@@ -465,15 +470,21 @@ const serveStorageFile = asyncHandler(async (req, res) => {
   try {
     fileBuffer = await getObject(key);
   } catch (err) {
+    if (err.code === 'EPATHTRAVERSAL' || err.statusCode === 403) {
+      throw new ApiError(403, err.message || 'Access denied: Storage path traversal detected');
+    }
     if (err.code === 'ENOENT') {
       throw new ApiError(404, 'Storage object not found');
     }
     throw err;
   }
 
-  // Safe headers
+  // Safe headers & sanitized file attachment name
+  const safeName = path.basename(name || 'document').replace(/[^a-zA-Z0-9._-]/g, '_');
+  const safeDisp = disp === 'inline' ? 'inline' : 'attachment';
+
   res.setHeader('Content-Type', 'application/octet-stream');
-  res.setHeader('Content-Disposition', `${disp}; filename="${name}"`);
+  res.setHeader('Content-Disposition', `${safeDisp}; filename="${safeName}"`);
   res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 

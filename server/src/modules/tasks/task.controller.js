@@ -62,9 +62,18 @@ const getTasks = asyncHandler(async (req, res) => {
     filter.branch = branch;
   }
 
-  if (req.user.role === ROLES.COUNSELLOR && scope !== 'branch') {
+  // Role-based scoping & BOLA prevention:
+  // Counsellors and frontline staff are strictly constrained to tasks assigned to their own user ID.
+  if (req.user.role === ROLES.COUNSELLOR) {
+    if (scope === 'branch') {
+      throw new ApiError(403, 'Access denied: Counsellors are not authorized to view branch-wide tasks.');
+    }
+    if (assignedTo && String(assignedTo) !== String(req.user._id)) {
+      throw new ApiError(403, 'Access denied: Counsellors can only view tasks assigned to their own user ID.');
+    }
     filter.assignedTo = req.user._id;
   } else if (assignedTo) {
+    // Branch Managers and Super Admins can filter by specific assignees
     filter.assignedTo = assignedTo;
   }
 
@@ -224,6 +233,17 @@ const getTaskById = asyncHandler(async (req, res) => {
     );
   }
 
+  // BOLA / IDOR Protection: Counsellors can only view tasks assigned to their own user ID
+  if (
+    req.user.role === ROLES.COUNSELLOR &&
+    String(task.assignedTo) !== String(req.user._id)
+  ) {
+    throw new ApiError(
+      403,
+      'Access denied: You are only authorized to view tasks assigned to your own user ID.'
+    );
+  }
+
   res.status(200).json(new ApiResponse(200, task));
 });
 
@@ -240,7 +260,10 @@ const createTask = asyncHandler(async (req, res) => {
   let assignedTo = req.body.assignedTo || req.user._id;
   let assignedToName = req.body.assignedToName || '';
 
-  if (req.body.assignedTo && req.body.assignedTo !== String(req.user._id)) {
+  if (req.body.assignedTo && String(req.body.assignedTo) !== String(req.user._id)) {
+    if (req.user.role === ROLES.COUNSELLOR) {
+      throw new ApiError(403, 'Access denied: Counsellors cannot assign tasks to other staff members.');
+    }
     const assignee = await User.findById(req.body.assignedTo).select('name branch').lean();
     if (!assignee) {
       throw new ApiError(404, 'Assigned staff user not found.');
@@ -302,6 +325,14 @@ const updateTask = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Access denied: Cannot update task of another branch.');
   }
 
+  // BOLA / IDOR Protection: Counsellors can only update tasks assigned to their own user ID
+  if (
+    req.user.role === ROLES.COUNSELLOR &&
+    String(task.assignedTo) !== String(req.user._id)
+  ) {
+    throw new ApiError(403, 'Access denied: You can only update tasks assigned to your own user ID.');
+  }
+
   if (req.body.assignedTo && String(req.body.assignedTo) !== String(task.assignedTo)) {
     if (
       req.user.role !== ROLES.SUPER_ADMIN &&
@@ -359,6 +390,14 @@ const logReachout = asyncHandler(async (req, res) => {
     task.branch !== req.branchScope
   ) {
     throw new ApiError(403, 'Access denied: Task belongs to another branch.');
+  }
+
+  // BOLA / IDOR Protection: Counsellors can only log reach-outs for tasks assigned to their own user ID
+  if (
+    req.user.role === ROLES.COUNSELLOR &&
+    String(task.assignedTo) !== String(req.user._id)
+  ) {
+    throw new ApiError(403, 'Access denied: You can only log reach-outs for tasks assigned to your own user ID.');
   }
 
   const { channel, outcomeCode, notes, nextFollowupHours, markComplete } = req.body;
@@ -419,6 +458,14 @@ const completeTask = asyncHandler(async (req, res) => {
     task.branch !== req.branchScope
   ) {
     throw new ApiError(403, 'Access denied: Task belongs to another branch.');
+  }
+
+  // BOLA / IDOR Protection: Counsellors can only complete tasks assigned to their own user ID
+  if (
+    req.user.role === ROLES.COUNSELLOR &&
+    String(task.assignedTo) !== String(req.user._id)
+  ) {
+    throw new ApiError(403, 'Access denied: You can only complete tasks assigned to your own user ID.');
   }
 
   task.status = TASK_STATUSES.COMPLETED;

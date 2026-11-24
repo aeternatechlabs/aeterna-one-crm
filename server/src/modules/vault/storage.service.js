@@ -8,18 +8,142 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const STORAGE_ROOT_DIR = path.resolve(__dirname, '../../../storage_vault');
-const SIGNING_SECRET =
-  process.env.STORAGE_SIGNING_SECRET || process.env.JWT_SECRET || 'aeterna-vault-storage-signing-secret-key-2026';
+// Ensure environment variables are loaded if not already populated (e.g., test runner or standalone CLI)
+if (!process.env.STORAGE_SIGNING_SECRET && !process.env.JWT_SECRET) {
+  try {
+    const envPath = path.resolve(__dirname, '../../../.env');
+    if (fs.existsSync(envPath)) {
+      require('dotenv').config({ path: envPath });
+    }
+  } catch {
+    // Non-blocking in sandboxed environments
+  }
+}
 
-// Cloudflare R2 Configuration
+const STORAGE_ROOT_DIR = path.resolve(__dirname, '../../../storage_vault');
+
+/**
+ * Resolves the cryptographic signing secret for signed vault storage tokens.
+ * Fail-Closed: Strictly rejects hardcoded plain-text default fallbacks.
+ * Requires process.env.STORAGE_SIGNING_SECRET (or process.env.JWT_SECRET if explicitly configured).
+ */
+function getStorageSigningSecret() {
+  const secret = process.env.STORAGE_SIGNING_SECRET || process.env.JWT_SECRET;
+  if (!secret || typeof secret !== 'string' || !secret.trim()) {
+    throw new Error(
+      'Server configuration error: STORAGE_SIGNING_SECRET is not configured. Local signed storage requires a secure signing secret.'
+    );
+  }
+  return secret.trim();
+}
+
+/**
+ * Validates and safely resolves a storageKey against STORAGE_ROOT_DIR.
+ * Prevents directory traversal (../, ..\, null bytes, encoded dots, absolute paths, and symlink escapes).
+ *
+ * @param {string} storageKey - Candidate relative storage key (e.g., 'vault/bengaluru/STD-01/passport/scan.pdf')
+ * @returns {string} Fully resolved, validated canonical filesystem path within STORAGE_ROOT_DIR
+ * @throws {Error} If path is absolute, contains traversal sequences, or escapes STORAGE_ROOT_DIR
+ */
+function resolveSecureStoragePath(storageKey) {
+  if (!storageKey || typeof storageKey !== 'string') {
+    const err = new Error('Invalid storage key: Storage key must be a non-empty string');
+    err.code = 'EPATHTRAVERSAL';
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 1. Reject null bytes and control characters
+  if (storageKey.includes('\0')) {
+    const err = new Error('Access denied: Storage key contains prohibited null bytes');
+    err.code = 'EPATHTRAVERSAL';
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // 2. Reject absolute filesystem paths (Unix / or Windows drive C:\ or UNC \\)
+  if (path.isAbsolute(storageKey) || /^[a-zA-Z]:[/\\]/.test(storageKey) || storageKey.startsWith('\\\\')) {
+    const err = new Error('Access denied: Absolute filesystem paths are strictly prohibited in storage keys');
+    err.code = 'EPATHTRAVERSAL';
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // 3. Reject raw or URL-encoded path traversal sequences
+  let decodedKey = storageKey;
+  try {
+    decodedKey = decodeURIComponent(storageKey);
+  } catch (_) {
+    // If decoding fails, check raw string
+  }
+  const normalizedSlashes = decodedKey.replace(/\\/g, '/');
+
+  if (
+    normalizedSlashes.includes('../') ||
+    normalizedSlashes.includes('/..') ||
+    normalizedSlashes === '..' ||
+    normalizedSlashes.startsWith('../')
+  ) {
+    const err = new Error('Access denied: Path traversal sequence (..) detected in storage key');
+    err.code = 'EPATHTRAVERSAL';
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // 4. Resolve absolute path and enforce strict root containment
+  const normalizedRoot = path.resolve(STORAGE_ROOT_DIR);
+  const resolvedPath = path.resolve(normalizedRoot, storageKey);
+  const safeRootWithSep = normalizedRoot.endsWith(path.sep) ? normalizedRoot : normalizedRoot + path.sep;
+
+  if (resolvedPath !== normalizedRoot && !resolvedPath.startsWith(safeRootWithSep)) {
+    const err = new Error('Access denied: Storage path escapes permitted root directory');
+    err.code = 'EPATHTRAVERSAL';
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // 5. Symbolic link escape prevention (if file exists, verify its real canonical path)
+  if (fs.existsSync(resolvedPath)) {
+    try {
+      const realPath = fs.realpathSync(resolvedPath);
+      if (realPath !== normalizedRoot && !realPath.startsWith(safeRootWithSep)) {
+        const err = new Error('Access denied: Symbolic link escape detected outside permitted storage vault');
+        err.code = 'EPATHTRAVERSAL';
+        err.statusCode = 403;
+        throw err;
+      }
+    } catch (err) {
+      if (err.code === 'EPATHTRAVERSAL') throw err;
+      const error = new Error('Access denied: Failed to verify realpath for storage object');
+      error.code = 'EPATHTRAVERSAL';
+      error.statusCode = 403;
+      throw error;
+    }
+  }
+
+  return resolvedPath;
+}
+
+// Cloudflare R2 Configuration (dynamic getters to ensure live process.env resolution)
 const R2_CONFIG = {
-  accountId: process.env.R2_ACCOUNT_ID || '',
-  accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
-  secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
-  bucketName: process.env.R2_BUCKET_NAME || 'aeterna-one-vault',
-  publicUrl: process.env.R2_PUBLIC_URL || '',
-  customDomain: process.env.R2_CUSTOM_DOMAIN || '',
+  get accountId() {
+    return process.env.R2_ACCOUNT_ID || '';
+  },
+  get accessKeyId() {
+    return process.env.R2_ACCESS_KEY_ID || '';
+  },
+  get secretAccessKey() {
+    return process.env.R2_SECRET_ACCESS_KEY || '';
+  },
+  get bucketName() {
+    return process.env.R2_BUCKET_NAME || 'aeterna-one-vault';
+  },
+  get publicUrl() {
+    return process.env.R2_PUBLIC_URL || '';
+  },
+  get customDomain() {
+    return process.env.R2_CUSTOM_DOMAIN || '';
+  },
   region: 'auto',
   service: 's3',
 };
@@ -153,17 +277,25 @@ function signR2Request({ method, storageKey, body = null, contentType = '' }) {
 }
 
 /**
- * Generates an AWS SigV4 Presigned URL for direct browser access from Cloudflare R2
+ * Generates an AWS SigV4 Presigned URL for direct, private browser access from Cloudflare R2
+ * SEC-VULN-04 Hardened:
+ * - Strictly prohibits unauthenticated public CDN / custom domain bypass for private documents.
+ * - Always signs private object requests with AWS Signature Version 4.
+ * - Caps maximum expiration TTL to 900 seconds (15 minutes).
+ * - Validates storageKey path containment before signing.
  */
-function generateR2PresignedUrl(storageKey, { expiresIn = 900 } = {}) {
+function generateR2PresignedUrl(storageKey, { expiresIn = 900, disposition = 'inline' } = {}) {
   if (!isR2Configured()) return null;
 
-  // If a public domain or custom CDN URL is configured, use it directly
-  if (R2_CONFIG.publicUrl || R2_CONFIG.customDomain) {
-    const base = R2_CONFIG.publicUrl || R2_CONFIG.customDomain;
-    return `${base.replace(/\/$/, '')}/${storageKey}`;
-  }
+  // Validate path containment and reject malformed/traversal storage keys
+  resolveSecureStoragePath(storageKey);
 
+  // Enforce strict expiration: minimum 60s, maximum 900s (15 minutes)
+  const parsedExpires = parseInt(expiresIn, 10);
+  const safeExpiresIn = isNaN(parsedExpires) || parsedExpires <= 0 ? 900 : Math.min(parsedExpires, 900);
+
+  // SEC-VULN-04: Private student vault documents MUST ALWAYS use AWS SigV4 presigned URLs.
+  // Never bypass authentication or expose private documents via unauthenticated R2_PUBLIC_URL or R2_CUSTOM_DOMAIN.
   const host = `${R2_CONFIG.accountId}.r2.cloudflarestorage.com`;
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
@@ -176,9 +308,14 @@ function generateR2PresignedUrl(storageKey, { expiresIn = 900 } = {}) {
     'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
     'X-Amz-Credential': `${R2_CONFIG.accessKeyId}/${credentialScope}`,
     'X-Amz-Date': amzDate,
-    'X-Amz-Expires': String(expiresIn),
+    'X-Amz-Expires': String(safeExpiresIn),
     'X-Amz-SignedHeaders': 'host',
   };
+
+  const safeDisp = disposition === 'attachment' ? 'attachment' : 'inline';
+  if (safeDisp === 'attachment') {
+    queryParams['response-content-disposition'] = 'attachment';
+  }
 
   const sortedKeys = Object.keys(queryParams).sort();
   const canonicalQuery = sortedKeys
@@ -213,6 +350,30 @@ function generateR2PresignedUrl(storageKey, { expiresIn = 900 } = {}) {
   const signature = crypto.createHmac('sha256', signingKey).update(stringToSign, 'utf8').digest('hex');
 
   return `https://${host}${canonicalUri}?${canonicalQuery}&X-Amz-Signature=${signature}`;
+}
+
+/**
+ * Public Asset URL Resolver (SEC-VULN-04)
+ * Strictly designated for non-confidential public assets (e.g. public branding, university logos).
+ * Strictly forbids resolving private student vault objects (`vault/*`).
+ */
+function getPublicAssetUrl(publicAssetKey) {
+  if (!publicAssetKey || typeof publicAssetKey !== 'string') return null;
+  const trimmed = publicAssetKey.trim().replace(/^\//, '');
+
+  // Strict boundary: Never permit public URL resolution for private vault documents
+  if (trimmed.startsWith('vault/') || trimmed.startsWith('student/') || trimmed.startsWith('vault')) {
+    throw new Error('Access denied: Confidential vault documents cannot be resolved via public CDN');
+  }
+
+  // Must reside in an explicitly designated public directory
+  if (!trimmed.startsWith('public/')) {
+    throw new Error('Access denied: Only objects within the public/ namespace can be resolved via public CDN');
+  }
+
+  const base = R2_CONFIG.publicUrl || R2_CONFIG.customDomain;
+  if (!base) return null;
+  return `${base.replace(/\/$/, '')}/${trimmed}`;
 }
 
 /**
@@ -368,21 +529,25 @@ function buildStorageKey({ branch, studentId, category, fileName }) {
 }
 
 /**
- * Creates HMAC-SHA256 signature for a token
+ * Creates HMAC-SHA256 signature for a token using the securely validated signing secret
  */
 function createSignature(payload) {
-  return crypto.createHmac('sha256', SIGNING_SECRET).update(payload).digest('hex');
+  const secret = getStorageSigningSecret();
+  return crypto.createHmac('sha256', secret).update(payload).digest('hex');
 }
 
 /**
  * Generates a signed download URL / token with 15-minute TTL
  */
 function generateSignedDownloadToken({ storageKey, fileName, disposition = 'attachment', ttlSeconds = 900 }) {
+  // Validate storageKey against path traversal before embedding into token
+  resolveSecureStoragePath(storageKey);
+
   const expiresAt = Date.now() + ttlSeconds * 1000;
   const rawPayload = JSON.stringify({
     key: storageKey,
-    name: fileName,
-    disp: disposition,
+    name: path.basename(fileName || 'document').replace(/[^a-zA-Z0-9._-]/g, '_'),
+    disp: disposition === 'inline' ? 'inline' : 'attachment',
     exp: expiresAt,
   });
 
@@ -393,15 +558,26 @@ function generateSignedDownloadToken({ storageKey, fileName, disposition = 'atta
 }
 
 /**
- * Verifies and decodes a signed download token
+ * Verifies and decodes a signed download token with strict payload and traversal validation
  */
 function verifySignedDownloadToken(token) {
   if (!token || typeof token !== 'string' || !token.includes('.')) {
     return { valid: false, error: 'Malformed or missing storage access token' };
   }
 
-  const [encodedPayload, providedSignature] = token.split('.');
-  const expectedSignature = createSignature(encodedPayload);
+  const parts = token.split('.');
+  if (parts.length !== 2) {
+    return { valid: false, error: 'Malformed token structure. Expected two segments' };
+  }
+
+  const [encodedPayload, providedSignature] = parts;
+
+  let expectedSignature;
+  try {
+    expectedSignature = createSignature(encodedPayload);
+  } catch (err) {
+    return { valid: false, error: err.message || 'Storage signing configuration error' };
+  }
 
   // Constant-time signature comparison to prevent timing attacks
   const sigBufferA = Buffer.from(providedSignature, 'hex');
@@ -415,8 +591,23 @@ function verifySignedDownloadToken(token) {
     const rawPayload = Buffer.from(encodedPayload, 'base64url').toString('utf8');
     const payload = JSON.parse(rawPayload);
 
-    if (Date.now() > payload.exp) {
+    if (!payload || typeof payload !== 'object') {
+      return { valid: false, error: 'Invalid token payload structure' };
+    }
+
+    if (typeof payload.exp !== 'number' || Date.now() > payload.exp) {
       return { valid: false, error: 'Signed storage access link has expired (15-minute TTL exceeded)' };
+    }
+
+    if (!payload.key || typeof payload.key !== 'string') {
+      return { valid: false, error: 'Missing or invalid storage key in token payload' };
+    }
+
+    // Path traversal validation check on token payload key
+    try {
+      resolveSecureStoragePath(payload.key);
+    } catch (traversalErr) {
+      return { valid: false, error: traversalErr.message || 'Access denied: Path traversal detected in token' };
     }
 
     return { valid: true, payload };
@@ -430,8 +621,8 @@ function verifySignedDownloadToken(token) {
  * Always mirrors locally so offline verification and tests pass seamlessly.
  */
 async function putObject(storageKey, buffer, contentType) {
-  // Always mirror to local storage directory for resiliency and test harness
-  const targetPath = path.join(STORAGE_ROOT_DIR, storageKey);
+  // Validate path containment and resolve target local path safely
+  const targetPath = resolveSecureStoragePath(storageKey);
   const targetDir = path.dirname(targetPath);
 
   if (!fs.existsSync(targetDir)) {
@@ -479,7 +670,8 @@ async function getObject(storageKey) {
     }
   }
 
-  const targetPath = path.join(STORAGE_ROOT_DIR, storageKey);
+  // Validate containment and resolve target local path safely
+  const targetPath = resolveSecureStoragePath(storageKey);
   if (!fs.existsSync(targetPath)) {
     const err = new Error('Object not found in storage');
     err.code = 'ENOENT';
@@ -498,7 +690,7 @@ async function deleteObject(storageKey) {
   }
 
   // 2. Delete from local disk
-  const targetPath = path.join(STORAGE_ROOT_DIR, storageKey);
+  const targetPath = resolveSecureStoragePath(storageKey);
   if (fs.existsSync(targetPath)) {
     try {
       await fs.promises.unlink(targetPath);
@@ -524,4 +716,7 @@ module.exports = {
   generateR2PresignedUrl,
   testR2Connection,
   STORAGE_ROOT_DIR,
+  resolveSecureStoragePath,
+  getStorageSigningSecret,
+  getPublicAssetUrl,
 };

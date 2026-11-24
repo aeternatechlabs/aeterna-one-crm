@@ -53,8 +53,12 @@ api.interceptors.response.use(
         const storedRefreshToken = typeof window !== 'undefined' ? localStorage.getItem('aeterna_refresh_token') : null;
         const refreshRes = await api.post('/auth/refresh', storedRefreshToken ? { refreshToken: storedRefreshToken } : {});
         const newToken = refreshRes?.data?.token || refreshRes?.token;
+        const newRefreshToken = refreshRes?.data?.refreshToken || refreshRes?.refreshToken;
         if (newToken && typeof window !== 'undefined') {
           localStorage.setItem('aeterna_token', newToken);
+        }
+        if (newRefreshToken && typeof window !== 'undefined') {
+          localStorage.setItem('aeterna_refresh_token', newRefreshToken);
         }
         return api(originalRequest);
       } catch (refreshErr) {

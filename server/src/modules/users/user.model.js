@@ -80,6 +80,11 @@ const userSchema = new mongoose.Schema(
       default: 0,
       index: true,
     },
+    mustChangePassword: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     resetOTP: {
       type: String,
       select: false,

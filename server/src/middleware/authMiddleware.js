@@ -28,6 +28,11 @@ const protect = asyncHandler(async (req, res, next) => {
   }
   const decoded = jwt.verify(token, jwtSecret);
 
+  // SEC-VULN-10: Token type separation - ensure refresh tokens cannot be used as access tokens
+  if (decoded.type && decoded.type !== 'access') {
+    throw new ApiError(401, 'Invalid token type: expected an access token.');
+  }
+
   // Look up user from database
   const user = await User.findById(decoded.id).select('-password');
 
@@ -45,6 +50,27 @@ const protect = asyncHandler(async (req, res, next) => {
 
   if (tokenVersion !== userTokenVersion) {
     throw new ApiError(401, 'Session has expired or token has been revoked. Please log in again.');
+  }
+
+  // SEC-VULN-09: Mandatory password change gate for temporary credentials / initial provisioning
+  if (user.mustChangePassword) {
+    const rawPath = (req.originalUrl || (req.baseUrl ? req.baseUrl + req.path : req.url) || req.path || '').split('?')[0];
+    const isAllowedAuthPath =
+      rawPath.endsWith('/auth/change-password') ||
+      rawPath.endsWith('/auth/me') ||
+      rawPath.endsWith('/auth/logout') ||
+      rawPath.endsWith('/auth/refresh') ||
+      rawPath === '/change-password' ||
+      rawPath === '/me' ||
+      rawPath === '/logout';
+
+    if (!isAllowedAuthPath) {
+      throw new ApiError(
+        403,
+        'Password change required. You must change your temporary password before accessing CRM features.',
+        { code: 'PASSWORD_CHANGE_REQUIRED', mustChangePassword: true }
+      );
+    }
   }
 
   req.user = user;

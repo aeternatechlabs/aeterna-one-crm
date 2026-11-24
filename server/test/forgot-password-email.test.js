@@ -11,6 +11,7 @@ const User = require('../src/modules/users/user.model');
 const { ROLES, BRANCHES } = require('../src/config/constants');
 const { mockReqRes } = require('./helpers/testApp');
 const { forgotPassword, verifyResetOTP, resetPassword } = require('../src/modules/auth/auth.controller');
+const { getLastDispatchedEmailForTesting } = require('../src/services/emailService');
 
 describe('Milestone 4: 3-Step Forgot Password & Email Dispatch Engine', () => {
   let isMongoConnected = false;
@@ -163,9 +164,17 @@ describe('Milestone 4: 3-Step Forgot Password & Email Dispatch Engine', () => {
       });
 
       assert.equal(res.status, 200);
-      assert.ok(res.body.message);
-      assert.ok(res.body.devOtp, 'Should return devOtp in test environment');
-      dispatchedOtp = res.body.devOtp;
+      assert.ok(res.body.message || res.body.data?.message);
+      // SEC-VULN-05: devOtp must NEVER be exposed in any API response
+      assert.equal(res.body.devOtp, undefined, 'Must NEVER return devOtp in top-level response');
+      assert.equal(res.body.data?.devOtp, undefined, 'Must NEVER return devOtp in response data');
+      assert.equal(res.body.data?.otp, undefined, 'Must NEVER return otp in response data');
+
+      // Retrieve OTP from the isolated test email capture mechanism
+      const captured = getLastDispatchedEmailForTesting();
+      assert.ok(captured, 'Dispatched email must be captured in test mailbox');
+      assert.equal(captured.to, TEST_EMAIL);
+      dispatchedOtp = captured.otp;
       assert.equal(dispatchedOtp.length, 6, 'OTP must be 6 digits');
 
       // Verify DB stored hashed OTP and 15-minute expiration

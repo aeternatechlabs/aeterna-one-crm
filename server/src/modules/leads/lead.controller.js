@@ -94,17 +94,26 @@ const getLeads = asyncHandler(async (req, res) => {
     query.current_status = 'New';
   }
 
-  // Search Filter
-  if (search && search.trim()) {
+  // Search Filter with strict bounds and safe regex escaping (SEC-VULN-07)
+  if (req.query.search !== undefined && req.query.search !== null && typeof req.query.search !== 'string') {
+    throw new ApiError(400, 'Invalid search parameter: Search query must be a string.');
+  }
+
+  if (search && typeof search === 'string') {
     const term = search.trim();
-    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(escaped, 'i');
-    query.$or = [
-      { name: regex },
-      { phone_number: regex },
-      { email: regex },
-      { destination_country: regex },
-    ];
+    if (term.length > 50) {
+      throw new ApiError(400, 'Search query cannot exceed 50 characters.');
+    }
+    if (term.length > 0) {
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+      query.$or = [
+        { name: regex },
+        { phone_number: regex },
+        { email: regex },
+        { destination_country: regex },
+      ];
+    }
   }
 
   // Pagination parameters (LIMIT = 20 as in reference project)
