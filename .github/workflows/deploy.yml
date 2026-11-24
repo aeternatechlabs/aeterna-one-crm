@@ -1,0 +1,47 @@
+
+name: Deploy Aeterna One CRM Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "server/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: aeterna-crm-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Lightsail
+        env:
+          HOST: ${{ secrets.LIGHTSAIL_HOST }}
+          USER: ${{ secrets.LIGHTSAIL_USER }}
+          SSH_KEY_B64: ${{ secrets.LIGHTSAIL_SSH_KEY_B64 }}
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          printf '%s' "$SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/deploy_key "$USER@$HOST" <<'EOF'
+            set -e
+
+            cd /var/www/aeterna-one-crm
+            git fetch origin main
+            git reset --hard origin/main
+
+            cd server
+            npm ci
+            npm run build
+
+            pm2 restart aeterna-crm --update-env
+            pm2 save
+          EOF
