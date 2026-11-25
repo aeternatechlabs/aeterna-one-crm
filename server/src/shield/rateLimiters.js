@@ -2,29 +2,24 @@
  * Aeterna One — API Shield Rate Limiters
  *
  * Module-specific and global rate limiters using express-rate-limit v7 in-memory store.
- * Standardizes 429 responses with retryAfter, request ID tracking, and witty English error notices.
- * Sized appropriately for single-process internal team deployment (~25 users).
+ * Standardizes 429 responses with retryAfter, request ID tracking, and informative error notices.
+ * Sized appropriately for single-process internal team deployment (zero Redis dependencies).
  */
 
 const rateLimit = require('express-rate-limit');
 const SHIELD_CONFIG = require('./shieldConfig');
 const { getErrorMessage, ERROR_CATEGORIES } = require('./errorCatalogue');
-const { createSharedRateLimitStore } = require('./redisClient');
 
 /**
  * Factory for creating configured rate limiters with standardized shield 429 responses.
- * Uses shared RedisStore in production clusters (multi-instance) and MemoryStore in local development.
+ * Uses express-rate-limit's built-in in-memory store.
  */
 function createShieldLimiter(config, category = ERROR_CATEGORIES.RATE_LIMIT_EXCEEDED, customOptions = {}) {
-  const prefix = customOptions.prefix || `rl:${category.toLowerCase()}:`;
-  const store = customOptions.store !== undefined ? customOptions.store : createSharedRateLimitStore(prefix);
-
   const limiterOptions = {
     windowMs: config.windowMs,
     max: config.max,
     standardHeaders: true,
     legacyHeaders: false,
-    passOnStoreError: true, // Fail-open gracefully on transient Redis hiccups so operations aren't blocked
     handler: (req, res, next, options) => {
       const retryAfter = Math.ceil(options.windowMs / 1000);
       const errorInfo = getErrorMessage(category);
@@ -40,10 +35,6 @@ function createShieldLimiter(config, category = ERROR_CATEGORIES.RATE_LIMIT_EXCE
     },
     ...customOptions,
   };
-
-  if (store) {
-    limiterOptions.store = store;
-  }
 
   return rateLimit(limiterOptions);
 }

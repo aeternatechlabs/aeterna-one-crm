@@ -1,6 +1,5 @@
-const { test, describe, it, beforeEach, afterEach } = require('node:test');
+const { describe, it, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
-const crypto = require('crypto');
 const express = require('express');
 
 const { mockReqRes } = require('./helpers/testApp');
@@ -10,14 +9,12 @@ const {
   authLimiter,
   refreshLimiter,
   uploadsLimiter,
+  usersLimiter,
+  pipelineLimiter,
+  reportsLimiter,
 } = require('../src/shield/rateLimiters');
 const SHIELD_CONFIG = require('../src/shield/shieldConfig');
-const {
-  isRedisConfigured,
-  getRedisClient,
-  closeRedisClient,
-  createSharedRateLimitStore,
-} = require('../src/shield/redisClient');
+const { getRateLimitStoreConfig } = require('../src/shield/shieldConfig');
 const { ERROR_CATEGORIES } = require('../src/shield/errorCatalogue');
 
 function invokeLimiter(limiter, req, res) {
@@ -43,60 +40,7 @@ function invokeLimiter(limiter, req, res) {
   });
 }
 
-/**
- * Creates an in-memory shared Redis mock backend that speaks the RESP / Lua contract
- * required by rate-limit-redis v4 (SCRIPT LOAD, EVALSHA, PTTL, INCR, DEL).
- */
-function createSharedMockRedisBackend() {
-  const storeMap = new Map();
-  const scriptMap = new Map();
-
-  return {
-    call: async (cmd, ...args) => {
-      const command = cmd.toUpperCase();
-
-      if (command === 'SCRIPT') {
-        const [subCmd, script] = args;
-        if (subCmd.toUpperCase() === 'LOAD') {
-          const sha = crypto.createHash('sha1').update(script).digest('hex');
-          scriptMap.set(sha, script);
-          return sha;
-        }
-      }
-
-      if (command === 'EVALSHA') {
-        const [sha, numKeys, key, resetOnChange, windowMs] = args;
-        const now = Date.now();
-        let entry = storeMap.get(key);
-
-        if (!entry || entry.expiresAt <= now) {
-          entry = { hits: 1, expiresAt: now + Number(windowMs) };
-          storeMap.set(key, entry);
-          return [1, Number(windowMs)];
-        }
-
-        entry.hits += 1;
-        const remainingTtl = Math.max(entry.expiresAt - now, 0);
-        return [entry.hits, remainingTtl];
-      }
-
-      if (command === 'DEL') {
-        const [key] = args;
-        storeMap.delete(key);
-        return 1;
-      }
-
-      return null;
-    },
-    clear: () => {
-      storeMap.clear();
-      scriptMap.clear();
-    },
-    getHits: (key) => storeMap.get(key)?.hits || 0,
-  };
-}
-
-describe('VULN-08: Distributed Rate Limiting & Multi-Instance Protection Suite', () => {
+describe('VULN-08: In-Memory Rate Limiting & Zero Redis Protection Suite', () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
@@ -105,22 +49,22 @@ describe('VULN-08: Distributed Rate Limiting & Multi-Instance Protection Suite',
     delete process.env.REDIS_HOST;
     delete process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT;
     delete process.env.RATE_LIMIT_STORE;
-    closeRedisClient();
   });
 
   afterEach(() => {
     process.env = { ...originalEnv };
-    closeRedisClient();
   });
 
-  describe('1. In-Memory Development Mode & Zero Regression', () => {
-    it('operates in-memory by default when Redis is not configured (zero-dependency local dev)', () => {
-      assert.equal(isRedisConfigured(), false);
+  describe('1. In-Memory Standalone Architecture & Zero Redis Dependencies', () => {
+    it('operates in-memory with zero external Redis dependencies or configuration', () => {
       assert.equal(process.env.REDIS_URL, undefined);
-      assert.equal(SHIELD_CONFIG.REDIS, undefined, 'SHIELD_CONFIG.REDIS must remain undefined for backward compatibility');
+      assert.equal(process.env.REDIS_HOST, undefined);
+      assert.equal(SHIELD_CONFIG.REDIS, undefined, 'SHIELD_CONFIG.REDIS must remain undefined');
 
-      const store = createSharedRateLimitStore('rl:test:');
-      assert.equal(store, undefined, 'Must return undefined to default to express-rate-limit MemoryStore');
+      const storeConfig = getRateLimitStoreConfig();
+      assert.equal(storeConfig.storeType, 'memory');
+      assert.equal(storeConfig.isDistributed, false);
+      assert.equal(storeConfig.redisConfigured, false);
     });
 
     it('exports all standard rate limiters with expected threshold configurations', () => {
@@ -128,6 +72,9 @@ describe('VULN-08: Distributed Rate Limiting & Multi-Instance Protection Suite',
       assert.equal(typeof authLimiter, 'function');
       assert.equal(typeof refreshLimiter, 'function');
       assert.equal(typeof uploadsLimiter, 'function');
+      assert.equal(typeof usersLimiter, 'function');
+      assert.equal(typeof pipelineLimiter, 'function');
+      assert.equal(typeof reportsLimiter, 'function');
 
       assert.ok(SHIELD_CONFIG.RATE_LIMITS.GLOBAL.max >= 100);
       assert.ok(SHIELD_CONFIG.RATE_LIMITS.AUTH.max <= 100);
@@ -135,78 +82,59 @@ describe('VULN-08: Distributed Rate Limiting & Multi-Instance Protection Suite',
     });
   });
 
-  describe('2. Multi-Instance Shared Counter Enforcement', () => {
-    it('shares rate limit hit counters across multiple application instances using RedisStore', async () => {
-      const { RedisStore } = require('rate-limit-redis');
-      const sharedBackend = createSharedMockRedisBackend();
-
-      // Instance 1 Store
-      const storeInstance1 = new RedisStore({
-        sendCommand: (...args) => sharedBackend.call(...args),
-        prefix: 'rl:shared:auth:',
-      });
-
-      // Instance 2 Store (simulating second PM2 worker or Docker replica)
-      const storeInstance2 = new RedisStore({
-        sendCommand: (...args) => sharedBackend.call(...args),
-        prefix: 'rl:shared:auth:',
-      });
-
-      // Threshold: max 5 requests per minute
-      const config = { windowMs: 60 * 1000, max: 5 };
-
-      const limiterNode1 = createShieldLimiter(config, ERROR_CATEGORIES.RATE_LIMIT_LOGIN, {
-        store: storeInstance1,
-      });
-
-      const limiterNode2 = createShieldLimiter(config, ERROR_CATEGORIES.RATE_LIMIT_LOGIN, {
-        store: storeInstance2,
-      });
-
+  describe('2. In-Memory Threshold Enforcement', () => {
+    it('enforces request limit per IP address in-memory and blocks exceeding requests with HTTP 429', async () => {
+      // Threshold: max 3 requests per window
+      const config = { windowMs: 60 * 1000, max: 3 };
+      const limiter = createShieldLimiter(config, ERROR_CATEGORIES.RATE_LIMIT_LOGIN);
       const clientIp = '198.51.100.45';
 
-      // Send 3 requests to Instance 1
+      // First 3 requests must pass
       for (let i = 1; i <= 3; i++) {
         const { req, res } = mockReqRes({ remoteAddress: clientIp });
-        const result = await invokeLimiter(limiterNode1, req, res);
-        assert.equal(result.nextCalled, true, `Request ${i} to Instance 1 must pass`);
+        const result = await invokeLimiter(limiter, req, res);
+        assert.equal(result.nextCalled, true, `Request ${i} must pass`);
       }
 
-      // Send 2 requests to Instance 2 (Total hits = 5, reaching threshold)
-      for (let i = 4; i <= 5; i++) {
-        const { req, res } = mockReqRes({ remoteAddress: clientIp });
-        const result = await invokeLimiter(limiterNode2, req, res);
-        assert.equal(result.nextCalled, true, `Request ${i} to Instance 2 must pass`);
+      // 4th request from same IP must be BLOCKED with HTTP 429
+      const req4 = mockReqRes({ remoteAddress: clientIp });
+      const result4 = await invokeLimiter(limiter, req4.req, req4.res);
+      assert.equal(result4.nextCalled, false);
+      assert.equal(req4.res.statusCode, 429);
+      assert.equal(req4.res.body.code, ERROR_CATEGORIES.RATE_LIMIT_LOGIN);
+      assert.ok(req4.res.body.retryAfter > 0);
+    });
+
+    it('isolates rate limit counters between different client IP addresses', async () => {
+      const config = { windowMs: 60 * 1000, max: 2 };
+      const limiter = createShieldLimiter(config, ERROR_CATEGORIES.RATE_LIMIT_LOGIN);
+
+      const clientA = '198.51.100.10';
+      const clientB = '198.51.100.20';
+
+      // Exhaust client A's limit
+      for (let i = 1; i <= 2; i++) {
+        const { req, res } = mockReqRes({ remoteAddress: clientA });
+        const result = await invokeLimiter(limiter, req, res);
+        assert.equal(result.nextCalled, true);
       }
 
-      // 6th request to Instance 1: Must be BLOCKED with HTTP 429 because counter was shared with Instance 2!
-      const req6 = mockReqRes({ remoteAddress: clientIp });
-      const result6 = await invokeLimiter(limiterNode1, req6.req, req6.res);
-      assert.equal(result6.nextCalled, false);
-      assert.equal(req6.res.statusCode, 429);
-      assert.equal(req6.res.body.code, ERROR_CATEGORIES.RATE_LIMIT_LOGIN);
-      assert.ok(req6.res.body.retryAfter > 0);
+      // Client A is blocked
+      const blockedA = mockReqRes({ remoteAddress: clientA });
+      await invokeLimiter(limiter, blockedA.req, blockedA.res);
+      assert.equal(blockedA.res.statusCode, 429);
 
-      // 7th request to Instance 2: Must also be BLOCKED with HTTP 429
-      const req7 = mockReqRes({ remoteAddress: clientIp });
-      const result7 = await invokeLimiter(limiterNode2, req7.req, req7.res);
-      assert.equal(result7.nextCalled, false);
-      assert.equal(req7.res.statusCode, 429);
+      // Client B is still allowed
+      const allowedB = mockReqRes({ remoteAddress: clientB });
+      const resultB = await invokeLimiter(limiter, allowedB.req, allowedB.res);
+      assert.equal(resultB.nextCalled, true);
+      assert.notEqual(allowedB.res.statusCode, 429);
     });
   });
 
   describe('3. Rate Limit Response Headers & Standardized Payloads', () => {
     it('sets standard RateLimit headers (RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset)', async () => {
-      const { RedisStore } = require('rate-limit-redis');
-      const sharedBackend = createSharedMockRedisBackend();
-      const store = new RedisStore({
-        sendCommand: (...args) => sharedBackend.call(...args),
-        prefix: 'rl:headers:test:',
-      });
-
-      const limiter = createShieldLimiter({ windowMs: 60000, max: 10 }, ERROR_CATEGORIES.RATE_LIMIT_EXCEEDED, {
-        store,
-      });
+      const limiter = createShieldLimiter({ windowMs: 60000, max: 10 }, ERROR_CATEGORIES.RATE_LIMIT_EXCEEDED);
 
       const { req, res } = mockReqRes({ remoteAddress: '203.0.113.19' });
       await invokeLimiter(limiter, req, res);
@@ -243,53 +171,10 @@ describe('VULN-08: Distributed Rate Limiting & Multi-Instance Protection Suite',
     });
   });
 
-  describe('4. Production Fail-Closed Enforcement & Connection Resilience', () => {
-    it('throws server configuration error if REQUIRE_DISTRIBUTED_RATE_LIMIT=true without Redis', () => {
-      process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT = 'true';
-      delete process.env.REDIS_URL;
-      delete process.env.REDIS_HOST;
-
-      assert.throws(
-        () => getRedisClient(),
-        /Distributed rate limiting is required/
-      );
-    });
-
-    it('gracefully passes through when Redis throws transient command errors (fail-open for staff)', async () => {
-      // Simulating Redis command failure during request handling
-      const failingBackend = {
-        call: async (cmd) => {
-          if (cmd.toUpperCase() === 'SCRIPT') {
-            return 'fake-sha-script-loaded';
-          }
-          throw new Error('READONLY You cannot write against a read only replica');
-        },
-      };
-
-      const { RedisStore } = require('rate-limit-redis');
-      const store = new RedisStore({
-        sendCommand: (...args) => failingBackend.call(...args),
-        prefix: 'rl:failing:',
-      });
-
-      const limiter = createShieldLimiter(
-        { windowMs: 60000, max: 5 },
-        ERROR_CATEGORIES.RATE_LIMIT_EXCEEDED,
-        { store, passOnStoreError: true }
-      );
-
-      const { req, res } = mockReqRes({ remoteAddress: '198.51.100.99' });
-      const result = await invokeLimiter(limiter, req, res);
-
-      // Because passOnStoreError: true, user request proceeds safely without crashing
-      assert.equal(result.nextCalled, true);
-    });
-  });
-
-  describe('5. Trusted Proxy & Client IP Verification', () => {
+  describe('4. Trusted Proxy & Client IP Verification', () => {
     it('correctly uses socket remoteAddress when trust proxy is false (anti-spoofing)', () => {
       const app = express();
-      // In development / untrusted mode, trust proxy is false
+      // In standalone / untrusted mode, trust proxy is false
       app.set('trust proxy', false);
 
       const req = {

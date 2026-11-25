@@ -8,3 +8,4 @@ export { LoadingSpinner } from './LoadingSpinner';
 export { Modal } from './Modal';
 export { Select } from './Select';
 export { StatCard } from './StatCard';
+export { Lotus } from './Lotus';

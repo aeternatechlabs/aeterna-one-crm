@@ -66,17 +66,14 @@ const SHIELD_CONFIG = {
 module.exports = SHIELD_CONFIG;
 
 /**
- * Returns configuration metadata for distributed rate limiting infrastructure.
- * Note: Kept as separate export to ensure SHIELD_CONFIG.REDIS remains undefined
- * to preserve zero-Redis standalone regression requirements.
+ * Returns configuration metadata for rate limiting infrastructure.
+ * In-memory standalone deployment with zero Redis dependencies.
  */
 module.exports.getRateLimitStoreConfig = function getRateLimitStoreConfig() {
-  const isRedis = Boolean(process.env.REDIS_URL || process.env.REDIS_HOST);
-  const storeType = process.env.RATE_LIMIT_STORE || (isRedis ? 'redis' : 'memory');
   return {
-    storeType,
-    isDistributed: isRedis,
-    redisConfigured: isRedis,
-    requireDistributed: process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT === 'true',
+    storeType: 'memory',
+    isDistributed: false,
+    redisConfigured: false,
+    requireDistributed: false,
   };
 };

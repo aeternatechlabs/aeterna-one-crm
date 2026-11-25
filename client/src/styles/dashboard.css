@@ -188,13 +188,22 @@
 
 .metric-card-watermark {
   position: absolute;
-  right: 12px;
-  bottom: 8px;
-  color: var(--color-gold-500);
-  opacity: 0.28;
+  right: -2px;
+  bottom: 14px;
+  width: 56px;
+  height: auto;
+  aspect-ratio: 110 / 86;
+  opacity: 0.65;
   pointer-events: none;
-  width: 48px;
-  height: 48px;
+  transform: rotate(-24deg);
+  transform-origin: bottom right;
+  filter: drop-shadow(0 2px 6px rgba(231, 185, 74, 0.22));
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.metric-card-theme:hover .metric-card-watermark {
+  opacity: 0.95;
+  transform: rotate(-8deg) scale(1.06);
 }
 
 /* Admissions Pipeline Progress Track */
@@ -248,71 +257,117 @@
   transform: translateX(2px);
 }
 
-/* 7 Chevron Stage Ribbon */
+/* 7 Chevron Stage Ribbon (Interconnected Triangle/Chevron Progress Ribbon) */
 .pipeline-chevrons-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 10px;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-subtle) transparent;
 }
 
-@media (max-width: 900px) {
-  .pipeline-chevrons-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
+.pipeline-chevrons-grid::-webkit-scrollbar {
+  height: 5px;
 }
 
-@media (max-width: 550px) {
-  .pipeline-chevrons-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.pipeline-chevrons-grid::-webkit-scrollbar-thumb {
+  background: var(--color-border-subtle);
+  border-radius: 4px;
 }
 
 .chevron-stage-box {
-  background: var(--color-bg-muted);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 12px;
-  padding: 12px 8px;
-  text-align: center;
+  flex: 1 1 0;
+  min-width: 105px;
+  height: 66px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  transition: all 0.2s ease;
+  justify-content: center;
+  align-items: center;
+  margin-left: -11px;
+  padding: 8px 12px 8px 22px;
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 0 100%, 15px 50%);
+  transition: transform 0.15s ease, filter 0.15s ease;
   cursor: pointer;
+  position: relative;
+  user-select: none;
 }
 
-.chevron-stage-box:hover {
-  border-color: var(--color-gold-400);
-  background: var(--color-gold-50);
+.chevron-stage-box:first-child {
+  margin-left: 0;
+  padding-left: 14px;
+  padding-right: 20px;
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 0 100%);
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+/* Warm Karnataka Heritage blush & cream progression */
+.chevron-stage-box:nth-child(1) { background: #fdf5f0; }
+.chevron-stage-box:nth-child(2) { background: #fdeee9; }
+.chevron-stage-box:nth-child(3) { background: #fce6e1; }
+.chevron-stage-box:nth-child(4) { background: #fbded8; }
+.chevron-stage-box:nth-child(5) { background: #fad5ce; }
+.chevron-stage-box:nth-child(6) { background: #f9cdc5; }
+
+.chevron-stage-box:hover:not(.chevron-stage-enrolled) {
+  filter: brightness(0.96);
   transform: translateY(-1px);
 }
 
 .chevron-stage-title {
   font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
+  font-weight: 700;
+  color: var(--color-gold-700);
+  line-height: 1.2;
+  letter-spacing: 0.01em;
 }
 
 .chevron-stage-number {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 900;
-  color: var(--color-text-primary);
+  color: var(--color-maroon-850);
   line-height: 1.1;
+  margin-top: 2px;
+  letter-spacing: -0.02em;
 }
 
-/* Highlighted 'Enrolled' Final Milestone Block */
+/* Highlighted 'Enrolled' Final Milestone Chevron with Gold Contour Border */
 .chevron-stage-enrolled {
-  background: var(--color-maroon-850) !important;
-  border-color: var(--color-maroon-900) !important;
-  box-shadow: 0 4px 14px rgba(88, 11, 30, 0.25);
+  background: #eab308 !important;
+  position: relative;
+  filter: drop-shadow(0 2px 8px rgba(90, 12, 30, 0.22));
+}
+
+.chevron-stage-enrolled::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: linear-gradient(135deg, #580b1e 0%, #3e0714 100%);
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 50%, calc(100% - 15px) 100%, 0 100%, 15px 50%);
+  z-index: 0;
+}
+
+.chevron-stage-enrolled > * {
+  position: relative;
+  z-index: 1;
 }
 
 .chevron-stage-enrolled .chevron-stage-title {
-  color: var(--color-gold-300) !important;
+  color: #fde047 !important;
   font-weight: 800;
 }
 
 .chevron-stage-enrolled .chevron-stage-number {
-  color: var(--color-text-inverse) !important;
+  color: #fef08a !important;
+  font-weight: 900;
+}
+
+.chevron-stage-enrolled:hover {
+  filter: drop-shadow(0 4px 14px rgba(90, 12, 30, 0.35)) brightness(1.05);
+  transform: translateY(-1px);
 }
 
 /* Bottom Two-Column Grid: Lead Trend + Tasks */

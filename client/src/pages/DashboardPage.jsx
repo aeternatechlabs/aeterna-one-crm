@@ -25,6 +25,7 @@ import { useDashboardSummary, useSystemHealth } from '../hooks/useDashboardQueri
 import { Select } from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
+import { Lotus } from '../components/common/Lotus';
 import { BRANCH_LABELS } from '../config/constants';
 import skylineBannerImg from '../assets/heritage/vidhana-soudha.webp';
 
@@ -306,15 +307,8 @@ export const DashboardPage = () => {
               <span>+18%</span>
             </span>
           </div>
-          {/* Subtle Lotus Watermark */}
-          <svg
-            className="metric-card-watermark"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M12 2C12 2 13.5 6.5 16 8C18.5 9.5 22 10 22 10C22 10 18.5 12 17 14.5C15.5 17 15 21 15 21C15 21 13.5 17.5 12 16C10.5 17.5 9 21 9 21C9 21 8.5 17 7 14.5C5.5 12 2 10 2 10C2 10 5.5 9.5 8 8C10.5 6.5 12 2 12 2Z" />
-          </svg>
+          {/* Karnataka Heritage Lotus Emblem Watermark */}
+          <Lotus className="metric-card-watermark" />
         </div>
 
         {/* Card 2: Active Students */}
@@ -332,14 +326,7 @@ export const DashboardPage = () => {
               <span>+22%</span>
             </span>
           </div>
-          <svg
-            className="metric-card-watermark"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M12 2C12 2 13.5 6.5 16 8C18.5 9.5 22 10 22 10C22 10 18.5 12 17 14.5C15.5 17 15 21 15 21C15 21 13.5 17.5 12 16C10.5 17.5 9 21 9 21C9 21 8.5 17 7 14.5C5.5 12 2 10 2 10C2 10 5.5 9.5 8 8C10.5 6.5 12 2 12 2Z" />
-          </svg>
+          <Lotus className="metric-card-watermark" />
         </div>
 
         {/* Card 3: Applications */}
@@ -357,14 +344,7 @@ export const DashboardPage = () => {
               <span>+20%</span>
             </span>
           </div>
-          <svg
-            className="metric-card-watermark"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M12 2C12 2 13.5 6.5 16 8C18.5 9.5 22 10 22 10C22 10 18.5 12 17 14.5C15.5 17 15 21 15 21C15 21 13.5 17.5 12 16C10.5 17.5 9 21 9 21C9 21 8.5 17 7 14.5C5.5 12 2 10 2 10C2 10 5.5 9.5 8 8C10.5 6.5 12 2 12 2Z" />
-          </svg>
+          <Lotus className="metric-card-watermark" />
         </div>
 
         {/* Card 4: Visas Approved */}
@@ -382,14 +362,7 @@ export const DashboardPage = () => {
               <span>+26%</span>
             </span>
           </div>
-          <svg
-            className="metric-card-watermark"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M12 2C12 2 13.5 6.5 16 8C18.5 9.5 22 10 22 10C22 10 18.5 12 17 14.5C15.5 17 15 21 15 21C15 21 13.5 17.5 12 16C10.5 17.5 9 21 9 21C9 21 8.5 17 7 14.5C5.5 12 2 10 2 10C2 10 5.5 9.5 8 8C10.5 6.5 12 2 12 2Z" />
-          </svg>
+          <Lotus className="metric-card-watermark" />
         </div>
       </section>
 
