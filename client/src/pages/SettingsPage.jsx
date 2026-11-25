@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo ,useEffect} from 'react';
 import { Link } from 'react-router-dom';
 import {
   Shield,
@@ -34,6 +34,8 @@ import {
   can,
   getRolePermissions,
 } from '../config/roles';
+import toast from 'react-hot-toast';
+import { Modal } from '../components/common/Modal';
 import { authService } from '../services/auth.service';
 import { settingsService } from '../services/settings.service';
 import '../styles/settings.css';
@@ -111,20 +113,29 @@ export const SettingsPage = () => {
   const [testingStorage, setTestingStorage] = useState(false);
   const [testStorageResult, setTestStorageResult] = useState(null);
 
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [connectingResend, setConnectingResend] = useState(false);
+  const [disconnectingResend, setDisconnectingResend] = useState(false);
+  const [resendForm, setResendForm] = useState({
+    apiKey: '',
+    senderEmail: 'noreply@mydomain.com',
+    displayName: 'Aeterna Education Consultancy',
+  });
+
   const fetchIntegrations = async () => {
     setLoadingIntegrations(true);
     try {
       const data = await settingsService.getIntegrations();
-      setIntegrations(data);
+      const payload = data?.data || data;
+      setIntegrations(payload);
     } catch {
-      // Fallback display for offline/test mode
       setIntegrations({
-        brevo: {
+        resend: {
           isConfigured: false,
           provider: 'development_relay',
-          senderEmail: 'admissions@aeterna.com',
+          senderEmail: 'noreply@mydomain.com',
           senderName: 'Aeterna Education Consultancy',
-          apiKeyMasked: 'Not Configured (Running in Development Relay)',
+          totalEmailsSent: 0,
         },
         cloudflareR2: {
           isConfigured: false,
@@ -147,10 +158,59 @@ export const SettingsPage = () => {
     }
   };
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'integrations') {
+        setActiveTab('integrations');
+        fetchIntegrations();
+      }
+    }
+  }, []);
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab === 'integrations' && !integrations) {
       fetchIntegrations();
+    }
+  };
+
+  const handleConnectResend = async (e) => {
+    if (e) e.preventDefault();
+    if (!resendForm.apiKey || !resendForm.apiKey.trim()) {
+      toast.error('Please enter your Resend API Key (re_...)');
+      return;
+    }
+    if (!resendForm.senderEmail || !resendForm.senderEmail.includes('@')) {
+      toast.error('Please enter a valid sender email (e.g. noreply@mydomain.com)');
+      return;
+    }
+    setConnectingResend(true);
+    try {
+      const res = await settingsService.connectResend(resendForm);
+      toast.success(res?.message || 'Resend email service configured successfully!');
+      setShowResendModal(false);
+      fetchIntegrations();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to configure Resend email service');
+    } finally {
+      setConnectingResend(false);
+    }
+  };
+
+  const handleDisconnectResend = async () => {
+    if (!window.confirm('Disconnect Resend email? System emails will revert to the development simulator.')) {
+      return;
+    }
+    setDisconnectingResend(true);
+    try {
+      const res = await settingsService.disconnectResend();
+      toast.success(res?.message || 'Resend email disconnected');
+      fetchIntegrations();
+    } catch (err) {
+      toast.error(err?.message || 'Failed to disconnect Resend');
+    } finally {
+      setDisconnectingResend(false);
     }
   };
 
@@ -711,7 +771,7 @@ export const SettingsPage = () => {
                   Cloud Services & External Integrations Hub
                 </h3>
                 <p style={{ margin: 0, color: '#4b5563', fontSize: '13px' }}>
-                  Super Admin control center to manage and verify live connectivity for Cloudflare R2 Object Storage and Brevo Transactional Email Engine.
+                  Super Admin control center to manage and verify live connectivity for Cloudflare R2 Object Storage and Transactional Email Engine.
                 </p>
               </div>
               <button
@@ -784,6 +844,67 @@ export const SettingsPage = () => {
                 </div>
               </div>
 
+              {/* Storage Quota & Capacity Bar */}
+              <div style={{ background: '#f9fafb', border: '1px solid #f3f4f6', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                  <span style={{ fontWeight: 600, color: '#374151' }}>R2 Quota Usage:</span>
+                  <span style={{ fontWeight: 700, color: (integrations?.storageMetrics?.usedPercentage || 0) > 85 ? '#dc2626' : '#059669' }}>
+                    {((integrations?.storageMetrics?.totalStorageBytes || 0) / (1024 * 1024)).toFixed(1)} MB / {integrations?.storageMetrics?.storageLimitGb || 10} GB ({integrations?.storageMetrics?.usedPercentage || '0.00'}%)
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: '8px', background: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${Math.max(1, Math.min(100, integrations?.storageMetrics?.usedPercentage || 0.5))}%`,
+                      background: (integrations?.storageMetrics?.usedPercentage || 0) > 85 ? '#dc2626' : '#059669',
+                      borderRadius: '9999px',
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6b7280' }}>
+                  <span>{((integrations?.storageMetrics?.freeStorageBytes || (10 * 1024 * 1024 * 1024)) / (1024 * 1024 * 1024)).toFixed(2)} GB Available</span>
+                  <span style={{ color: '#059669', fontWeight: 600 }}>● 100% Free Tier (0 Egress Fees)</span>
+                </div>
+              </div>
+
+              {/* Category Breakdown (if available) */}
+              {integrations?.storageMetrics?.categoryBreakdown && integrations.storageMetrics.categoryBreakdown.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#4b5563' }}>Storage by Document Type:</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {integrations.storageMetrics.categoryBreakdown.map((cat) => (
+                      <span
+                        key={cat.category}
+                        style={{
+                          fontSize: '11px',
+                          background: '#f3f4f6',
+                          color: '#374151',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          border: '1px solid #e5e7eb',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <strong style={{ textTransform: 'capitalize' }}>{cat.category.replace(/_/g, ' ')}:</strong>
+                        <span>{cat.count} files ({cat.mb} MB)</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Storage Optimization Features */}
+              <div style={{ background: '#ecfdf5', border: '1px solid #d1fae5', borderRadius: '8px', padding: '10px 12px', fontSize: '11px', color: '#065f46', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontWeight: 700 }}>⚡ Built-in Storage Optimization Guardrails:</span>
+                <span>&bull; <strong>10MB Ceiling:</strong> Prevents uncompressed huge files.</span>
+                <span>&bull; <strong>Auto-Purge on Delete:</strong> Deleting a document instantly wipes it from R2 (zero zombie files).</span>
+                <span>&bull; <strong>Zero Egress Cost:</strong> Cloudflare R2 has ₹0 download data fees.</span>
+              </div>
+
               {/* Action Button */}
               <button
                 type="button"
@@ -811,23 +932,23 @@ export const SettingsPage = () => {
               )}
             </div>
 
-            {/* CARD 2: Brevo Email Dispatcher */}
+            {/* CARD 2: Resend Transactional Email Engine */}
             <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #ebd9c8', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f3f4f6', paddingBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span style={{ fontSize: '24px' }}>✉️</span>
                   <div>
-                    <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#111827' }}>Brevo Email Engine</h4>
-                    <span style={{ fontSize: '12px', color: '#6b7280' }}>Transactional SMTP & OTP Relay</span>
+                    <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#111827' }}>Resend Email Engine</h4>
+                    <span style={{ fontSize: '12px', color: '#6b7280' }}>Transactional Email API for OTPs, 2FA & Password Reset</span>
                   </div>
                 </div>
-                {integrations?.brevo?.isConfigured ? (
+                {integrations?.resend?.isConfigured || integrations?.email?.isConfigured ? (
                   <span style={{ background: '#ecfdf5', color: '#059669', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700 }}>
-                    ● BREVO ACTIVE
+                    ● RESEND ACTIVE ({integrations?.resend?.senderEmail || integrations?.email?.senderEmail || 'noreply@mydomain.com'})
                   </span>
                 ) : (
                   <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700 }}>
-                    ● DEV RELAY (SIMULATED)
+                    ○ NOT CONFIGURED (DEV SIMULATOR)
                   </span>
                 )}
               </div>
@@ -835,20 +956,55 @@ export const SettingsPage = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f3f4f6', paddingBottom: '8px' }}>
                   <span style={{ color: '#6b7280' }}>Sender Email:</span>
-                  <span style={{ fontWeight: 600, color: '#111827' }}>{integrations?.brevo?.senderEmail || 'admissions@aeterna.com'}</span>
+                  <span style={{ fontWeight: 600, color: '#111827' }}>{integrations?.resend?.senderEmail || integrations?.email?.senderEmail || 'noreply@mydomain.com'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f3f4f6', paddingBottom: '8px' }}>
                   <span style={{ color: '#6b7280' }}>Sender Name:</span>
-                  <span style={{ fontWeight: 600, color: '#111827' }}>{integrations?.brevo?.senderName || 'Aeterna Education Consultancy'}</span>
+                  <span style={{ fontWeight: 600, color: '#111827' }}>{integrations?.resend?.senderName || integrations?.email?.senderName || 'Aeterna Education Consultancy'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f3f4f6', paddingBottom: '8px' }}>
                   <span style={{ color: '#6b7280' }}>API Key:</span>
-                  <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{integrations?.brevo?.apiKeyMasked || 'Not Set'}</span>
+                  <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#9a6a24' }}>
+                    {integrations?.resend?.apiKeyMasked || 'Not Set'}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #f3f4f6', paddingBottom: '8px' }}>
-                  <span style={{ color: '#6b7280' }}>HTML Email Template:</span>
-                  <span style={{ color: '#9a6a24', fontWeight: 600 }}>Karnataka Luxury Theme Active</span>
+                  <span style={{ color: '#6b7280' }}>Emails Dispatched:</span>
+                  <span style={{ fontWeight: 600, color: '#111827' }}>{integrations?.resend?.totalEmailsSent ?? 0}</span>
                 </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowResendModal(true)}
+                  className="action-pill-btn"
+                  style={{
+                    flex: 1,
+                    background: '#5a0c1e',
+                    color: '#ffffff',
+                    padding: '8px 14px',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <span>{integrations?.resend?.isConfigured ? 'Update Resend Settings' : 'Configure Resend'}</span>
+                </button>
+                {integrations?.resend?.isConfigured && (
+                  <button
+                    type="button"
+                    onClick={handleDisconnectResend}
+                    disabled={disconnectingResend}
+                    className="action-pill-btn"
+                    style={{
+                      background: '#fef2f2',
+                      color: '#b91c1c',
+                      border: '1px solid #fecaca',
+                      padding: '8px 14px',
+                    }}
+                  >
+                    <span>{disconnectingResend ? 'Disconnecting...' : 'Disconnect'}</span>
+                  </button>
+                )}
               </div>
 
               {/* Live Test Form */}
@@ -902,7 +1058,7 @@ export const SettingsPage = () => {
               Production Deployment Instructions
             </h4>
             <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#4b5563', lineHeight: 1.5 }}>
-              To activate Cloudflare R2 and Brevo in your live production environment, add the following configuration variables to your server <code style={{ background: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #e5e7eb' }}>server/.env</code> file:
+              To configure Resend email and Cloudflare R2 in your live environment, add the following variables to your <code style={{ background: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #e5e7eb' }}>server/.env</code> file:
             </p>
             <pre style={{
               background: '#1e293b',
@@ -914,10 +1070,11 @@ export const SettingsPage = () => {
               fontFamily: 'Consolas, monospace',
               margin: 0
             }}>
-{`# Brevo (Sendinblue) Transactional API
-BREVO_API_KEY=xkeysib-your_real_brevo_v3_api_key_here
-BREVO_SENDER_EMAIL=admissions@aeterna.com
-BREVO_SENDER_NAME=Aeterna Education Consultancy
+{`# Resend Transactional Email Engine (e.g. noreply@mydomain.com)
+EMAIL_PROVIDER=resend
+RESEND_API_KEY=re_your_resend_api_key_here
+EMAIL_FROM=noreply@mydomain.com
+EMAIL_SENDER_NAME=Aeterna Education Consultancy
 
 # Cloudflare R2 Object Storage (S3-Compatible)
 R2_ACCOUNT_ID=your_cloudflare_account_id_here
@@ -928,6 +1085,103 @@ STORAGE_SIGNING_SECRET=aeterna-vault-storage-signing-secret-key-2026`}
             </pre>
           </div>
         </div>
+      )}
+
+      {/* Resend Configuration Modal */}
+      {showResendModal && (
+        <Modal
+          isOpen={showResendModal}
+          onClose={() => setShowResendModal(false)}
+          title="Configure Resend Email Service"
+          subtitle="Connect your Resend API Key and verified domain sender email for 2FA OTPs and password resets."
+        >
+          <form onSubmit={handleConnectResend} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>
+                Resend API Key (re_...) <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="password"
+                value={resendForm.apiKey}
+                onChange={(e) => setResendForm({ ...resendForm, apiKey: e.target.value })}
+                placeholder="re_123456789_abcdef..."
+                required
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '13px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontFamily: 'monospace',
+                  outline: 'none',
+                }}
+              />
+              <span style={{ fontSize: '11px', color: '#6b7280' }}>
+                Find or create this in your Resend Dashboard &rarr; API Keys.
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>
+                Sender Email Address <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="email"
+                value={resendForm.senderEmail}
+                onChange={(e) => setResendForm({ ...resendForm, senderEmail: e.target.value })}
+                placeholder="noreply@mydomain.com"
+                required
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '13px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  outline: 'none',
+                }}
+              />
+              <span style={{ fontSize: '11px', color: '#6b7280' }}>
+                Must be an address on your verified domain in Resend.
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>
+                Sender Display Name
+              </label>
+              <input
+                type="text"
+                value={resendForm.displayName}
+                onChange={(e) => setResendForm({ ...resendForm, displayName: e.target.value })}
+                placeholder="e.g. Aeterna Education Consultancy"
+                style={{
+                  padding: '8px 12px',
+                  fontSize: '13px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setShowResendModal(false)}
+                className="action-pill-btn"
+                style={{ background: '#f3f4f6', color: '#374151' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={connectingResend}
+                className="action-pill-btn"
+                style={{ background: '#5a0c1e', color: '#ffffff', minWidth: '150px', justifyContent: 'center' }}
+              >
+                {connectingResend ? 'Connecting...' : 'Save Resend Settings'}
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

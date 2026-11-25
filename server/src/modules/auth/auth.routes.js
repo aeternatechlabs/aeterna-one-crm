@@ -19,7 +19,6 @@ const { protect } = require('../../middleware/authMiddleware');
 const { requireRole } = require('../../middleware/roleMiddleware');
 const { ROLES } = require('../../config/constants');
 const { authLimiter, refreshLimiter } = require('../../shield');
-
 const router = express.Router();
 
 // One-Time Super Admin Initial Provisioning (Guarded by Developer Key & Single Super Admin rule)

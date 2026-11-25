@@ -30,5 +30,9 @@ Thumbs.db
 storage_vault/
 server/storage_vault/
 
+# Database Backups
+backups/
+server/backups/
+
 # User Reference Codebase (Read-Only)
 Management-software/

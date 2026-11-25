@@ -12,6 +12,8 @@
     "seed:dummy": "node src/scripts/seedDummyData.js",
     "seed:api": "node src/scripts/seedViaApi.js",
     "convert:image": "python src/scripts/convert_to_webp.py",
+    "backup:db": "node src/scripts/backupDatabase.js",
+    "restore:db": "node src/scripts/restoreDatabase.js",
     "test": "node --test test/**/*.test.js"
   },
   "keywords": [
@@ -39,6 +41,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.6.3",
     "morgan": "^1.10.0",
+    "resend": "^6.39.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
