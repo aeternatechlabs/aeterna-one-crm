@@ -35,7 +35,7 @@ const PORT = process.env.PORT || 5000;
 // Connect to MongoDB and start HTTP listener
 connectDB()
   .finally(() => {
-  const server = app.listen(PORT, () => {
+  const server = app.listen(PORT, "127.0.0.1", () => {
     console.log('='.repeat(55));
     console.log('   AETERNA ONE CRM - BACKEND API SERVER');
     console.log('='.repeat(55));
