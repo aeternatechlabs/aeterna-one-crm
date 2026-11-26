@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Database,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -1052,24 +1053,116 @@ export const SettingsPage = () => {
             </div>
           </div>
 
-          {/* Configuration Guide Card */}
-          <div style={{ background: '#faf7f2', borderRadius: '16px', border: '1px dashed #9a6a24', padding: '20px 24px' }}>
-            <h4 style={{ margin: '0 0 8px 0', color: '#5a0c1e', fontSize: '15px', fontWeight: 700 }}>
-              Production Deployment Instructions
-            </h4>
-            <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#4b5563', lineHeight: 1.5 }}>
-              To configure Resend email and Cloudflare R2 in your live environment, add the following variables to your <code style={{ background: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #e5e7eb' }}>server/.env</code> file:
-            </p>
-            <pre style={{
-              background: '#1e293b',
-              color: '#f8fafc',
-              padding: '14px 18px',
-              borderRadius: '8px',
-              fontSize: '12px',
-              overflowX: 'auto',
-              fontFamily: 'Consolas, monospace',
-              margin: 0
-            }}>
+          {/* Configuration Status / Happy Developer Message */}
+          {(integrations?.resend?.isConfigured || integrations?.email?.isConfigured || integrations?.cloudflareR2?.isConfigured) ? (
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #faf7f2 100%)',
+                borderRadius: '16px',
+                border: '1px solid #86efac',
+                padding: '24px 28px',
+                boxShadow: '0 4px 16px rgba(22, 101, 52, 0.06)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div
+                    style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '12px',
+                      background: '#dcfce7',
+                      color: '#15803d',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #bbf7d0',
+                    }}
+                  >
+                    <Sparkles size={22} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, color: '#14532d', fontSize: '16px', fontWeight: 700 }}>
+                      All Cloud Services Successfully Configured & Online! 🎉
+                    </h4>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#166534' }}>
+                      A warm note from the development team
+                    </p>
+                  </div>
+                </div>
+                <span
+                  style={{
+                    background: '#dcfce7',
+                    color: '#15803d',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.5px',
+                    border: '1px solid #86efac',
+                  }}
+                >
+                  ✓ PRODUCTION READY
+                </span>
+              </div>
+
+              <div style={{ background: '#ffffff', borderRadius: '12px', padding: '16px 20px', border: '1px solid #dcfce7', marginBottom: '14px' }}>
+                <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#374151', lineHeight: 1.6 }}>
+                  <strong>Dear Administrator,</strong> your production environment is running smoothly! Your cloud services are securely wired up with active credentials and ready for business:
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px', marginTop: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <CheckCircle2 size={16} color="#15803d" style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <div style={{ fontSize: '12px' }}>
+                      <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                        {integrations?.resend?.isConfigured || integrations?.email?.isConfigured ? 'Resend Email Service Active' : 'Resend Email Pending'}
+                      </span>
+                      <p style={{ margin: '2px 0 0 0', color: '#64748b' }}>
+                        {integrations?.resend?.isConfigured || integrations?.email?.isConfigured
+                          ? `OTP, password resets & notifications sending from ${integrations?.resend?.senderEmail || 'verified domain'}.`
+                          : 'Currently operating in development simulator mode.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <CheckCircle2 size={16} color="#15803d" style={{ marginTop: '2px', flexShrink: 0 }} />
+                    <div style={{ fontSize: '12px' }}>
+                      <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                        {integrations?.cloudflareR2?.isConfigured ? 'Cloudflare R2 Storage Active' : 'Local Storage Active'}
+                      </span>
+                      <p style={{ margin: '2px 0 0 0', color: '#64748b' }}>
+                        {integrations?.cloudflareR2?.isConfigured
+                          ? `Zero-egress vault connected to bucket ${integrations?.cloudflareR2?.bucketName || 'aeterna-crm-documents'}.`
+                          : 'Operating with local disk storage vault.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p style={{ margin: 0, fontSize: '12px', color: '#166534', fontStyle: 'italic' }}>
+                ✨ Everything is humming along nicely! No manual .env editing is required. You can test dispatch or update configurations anytime directly from the cards above!
+              </p>
+            </div>
+          ) : (
+            /* Otherwise show Configuration Guide Card */
+            <div style={{ background: '#faf7f2', borderRadius: '16px', border: '1px dashed #9a6a24', padding: '20px 24px' }}>
+              <h4 style={{ margin: '0 0 8px 0', color: '#5a0c1e', fontSize: '15px', fontWeight: 700 }}>
+                Production Deployment Instructions
+              </h4>
+              <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#4b5563', lineHeight: 1.5 }}>
+                To configure Resend email and Cloudflare R2 in your live environment, add the following variables to your <code style={{ background: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #e5e7eb' }}>server/.env</code> file:
+              </p>
+              <pre style={{
+                background: '#1e293b',
+                color: '#f8fafc',
+                padding: '14px 18px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                overflowX: 'auto',
+                fontFamily: 'Consolas, monospace',
+                margin: 0
+              }}>
 {`# Resend Transactional Email Engine (e.g. noreply@mydomain.com)
 EMAIL_PROVIDER=resend
 RESEND_API_KEY=re_your_resend_api_key_here
@@ -1082,8 +1175,9 @@ R2_ACCESS_KEY_ID=your_r2_access_key_id_here
 R2_SECRET_ACCESS_KEY=your_r2_secret_access_key_here
 R2_BUCKET_NAME=aeterna-one-vault
 STORAGE_SIGNING_SECRET=aeterna-vault-storage-signing-secret-key-2026`}
-            </pre>
-          </div>
+              </pre>
+            </div>
+          )}
         </div>
       )}
 

@@ -26,7 +26,7 @@ import { Select } from '../components/common/Select';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { Lotus } from '../components/common/Lotus';
-import { BRANCH_LABELS } from '../config/constants';
+import { BRANCH_LABELS, ROLES } from '../config/constants';
 import skylineBannerImg from '../assets/heritage/vidhana-soudha.webp';
 
 // Operational task disposition outcomes mapped by task type
@@ -66,6 +66,8 @@ export const DashboardPage = () => {
 
   const [selectedPeriod, setSelectedPeriod] = useState('30');
 
+  const isSuperAdmin = user?.role === ROLES.SUPER_ADMIN || user?.role === 'super_admin';
+
   // TanStack Query Cached Dashboard Summary & System Health (Rule 12)
   const {
     summary,
@@ -81,7 +83,7 @@ export const DashboardPage = () => {
     health,
     isLoading: healthLoading,
     error: healthErrorObj,
-  } = useSystemHealth();
+  } = useSystemHealth({ enabled: isSuperAdmin });
 
   const summaryError = summaryErrorObj?.message || null;
   const healthError = healthErrorObj?.message || null;
@@ -669,65 +671,67 @@ export const DashboardPage = () => {
         </section>
       </div>
 
-      {/* 5. System Health & Infrastructure Diagnostics */}
-      <section
-        className="card"
-        style={{
-          marginTop: '12px',
-          borderColor: 'var(--color-border-subtle)',
-          boxShadow: 'var(--shadow-warm-xs)',
-        }}
-        aria-label="System Diagnostics"
-      >
-        <div className="card-header">
-          <h3 style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-            System Infrastructure & API Gateway Status
-          </h3>
-          <span className="card-tag">Live Diagnostics</span>
-        </div>
-        <div className="card-body" style={{ padding: '16px 20px' }}>
-          {healthLoading ? (
-            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-              Checking backend services...
-            </p>
-          ) : healthError ? (
-            <div className="alert alert-warning" style={{ fontSize: '12px' }}>
-              <strong>Diagnostics note:</strong> {healthError}
-            </div>
-          ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '12px',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Backend Service:</span>
-                <span className="badge badge-success">{health?.service || 'aeterna-one-crm'}</span>
+      {/* 5. System Health & Infrastructure Diagnostics (Super Admin Only) */}
+      {isSuperAdmin && (
+        <section
+          className="card"
+          style={{
+            marginTop: '12px',
+            borderColor: 'var(--color-border-subtle)',
+            boxShadow: 'var(--shadow-warm-xs)',
+          }}
+          aria-label="System Diagnostics"
+        >
+          <div className="card-header">
+            <h3 style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+              System Infrastructure & API Gateway Status
+            </h3>
+            <span className="card-tag">Live Diagnostics</span>
+          </div>
+          <div className="card-body" style={{ padding: '16px 20px' }}>
+            {healthLoading ? (
+              <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                Checking backend services...
+              </p>
+            ) : healthError ? (
+              <div className="alert alert-warning" style={{ fontSize: '12px' }}>
+                <strong>Diagnostics note:</strong> {healthError}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>API Status:</span>
-                <span className="badge badge-success">● {health?.status || 'healthy'}</span>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Backend Service:</span>
+                  <span className="badge badge-success">{health?.service || 'aeterna-one-crm'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>API Status:</span>
+                  <span className="badge badge-success">● {health?.status || 'healthy'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>MongoDB:</span>
+                  <span
+                    className={`badge ${
+                      health?.database === 'connected' ? 'badge-success' : 'badge-warning'
+                    }`}
+                  >
+                    ● {health?.database || 'connected'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Operating Hubs:</span>
+                  <span className="badge badge-branch">BLR • MYS • BGVM</span>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>MongoDB:</span>
-                <span
-                  className={`badge ${
-                    health?.database === 'connected' ? 'badge-success' : 'badge-warning'
-                  }`}
-                >
-                  ● {health?.database || 'connected'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>Operating Hubs:</span>
-                <span className="badge badge-branch">BLR • MYS • BGVM</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* 6. Operational Task Execution & Candidate Deep-Linking Modal */}
       {activeTaskModal && (

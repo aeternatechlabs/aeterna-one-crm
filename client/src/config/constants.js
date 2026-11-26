@@ -208,7 +208,6 @@ export const NAV_ITEMS = [
     roles: [
       ROLES.SUPER_ADMIN,
     ],
-    plannedPhase: 'Phase 1',
   },
 ];
 
