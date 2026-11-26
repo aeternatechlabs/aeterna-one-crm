@@ -30,6 +30,30 @@ const getHealth = (req, res) => {
   );
 };
 
+const getLiveness = (req, res) => {
+  res.status(200).json(
+    new ApiResponse(200, {
+      status: 'alive',
+      uptimeSeconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    })
+  );
+};
+
+const getReadiness = (req, res) => {
+  const dbConnected = isDbConnected();
+  const statusCode = dbConnected ? 200 : 503;
+  res.status(statusCode).json(
+    new ApiResponse(statusCode, {
+      status: dbConnected ? 'ready' : 'not_ready',
+      database: dbConnected ? 'connected' : 'disconnected',
+      timestamp: new Date().toISOString(),
+    })
+  );
+};
+
 module.exports = {
   getHealth,
+  getLiveness,
+  getReadiness,
 };

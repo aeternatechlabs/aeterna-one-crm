@@ -8,7 +8,7 @@ const hpp = require('hpp');
 
 const v1Routes = require('./routes/v1');
 const swaggerRoutes = require('./docs/swagger.routes');
-const { getHealth } = require('./modules/health/health.controller');
+const { getHealth, getLiveness, getReadiness } = require('./modules/health/health.controller');
 const errorHandler = require('./middleware/errorHandlerMiddleware');
 const requestIdMiddleware = require('./middleware/requestIdMiddleware');
 const {
@@ -191,10 +191,26 @@ app.use(handleParserErrors);
 app.use(cookieParser());
 
 // 5. HTTP Request Logging
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+morgan.token('id', (req) => req.id || '-');
+if (process.env.LOG_FORMAT === 'json') {
+  app.use(
+    morgan((tokens, req, res) =>
+      JSON.stringify({
+        requestId: tokens.id(req, res),
+        remoteAddr: tokens['remote-addr'](req, res),
+        method: tokens.method(req, res),
+        url: tokens.url(req, res),
+        status: Number(tokens.status(req, res)),
+        contentLength: tokens.res(req, res, 'content-length') || 0,
+        responseTimeMs: Number(tokens['response-time'](req, res)),
+        timestamp: new Date().toISOString(),
+      })
+    )
+  );
+} else if (process.env.NODE_ENV === 'development') {
+  app.use(morgan(':id :method :url :status :response-time ms'));
 } else {
-  app.use(morgan('combined'));
+  app.use(morgan(':id :remote-addr - :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent" - :response-time ms'));
 }
 
 // 6. Global API Rate Limiting Foundation (100 req / 15 min)
@@ -202,6 +218,8 @@ app.use('/api', globalLimiter);
 
 // 7. Top-level direct health check & Swagger API Explorer
 app.get('/health', getHealth);
+app.get('/health/liveness', getLiveness);
+app.get('/health/readiness', getReadiness);
 if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_SWAGGER === 'true') {
   app.get('/docs', (req, res) => res.redirect('/api-docs'));
   app.use('/api-docs', swaggerRoutes);

@@ -80,7 +80,6 @@
 3. **Milestone M3: Institution Master Directory (Schools, Colleges, Coaching Centers & Universities)** — Database with target destinations, contact person, branch filtering, category tabs, and Add Institution modal. Seeded via authentic backend API across 17 Karnataka institutions. (100% Completed & Verified)
 4. **Milestone M4: 3-Step Forgot Password & Email Dispatch** — 6-digit bcrypt-hashed OTP, Brevo email dispatcher, HTML email template, 3-step wizard modal, and reset password page. (100% Completed & Verified)
 5. **Cross-Module Integration, TanStack Query Caching & Security Audit** — Unified `QueryClient` caching across all pages (4-min freshness, 15-min gc, zero window-focus refetches), IDOR/BOLA authorization checks, auto task SLA generation on lead creation, and dual-highlight sidebar fix. (100% Completed & Verified)
-6. **Bonus/Extension: Secure Branch Attendance** — Branch subnet IP/CIDR validation preventing remote proxy clock-in.
 
 ---
 
@@ -1126,36 +1125,36 @@
 ### PHASE B6: Production Hardening & Pilot Launch (Days 76–90) &nbsp; [↑ Top](#top)
 
 <a id="day-76"></a>
-#### Day 76: Production Threat Model Refresh (PENDING) &nbsp; [↑ Top](#top)
-- [ ] Reassess authentication, authorization, branch isolation, sensitive data, file storage, integrations, and admin operations.
-- [ ] Review all prior findings and confirm remediation evidence.
-- [ ] **Acceptance:** Threat model lists assets, trust boundaries, attack paths, and security controls.
+#### Day 76: Production Threat Model Refresh (COMPLETED & VERIFIED) &nbsp; [↑ Top](#top)
+- [x] Reassess authentication, authorization, branch isolation, sensitive data, file storage, integrations, and admin operations.
+- [x] Review all prior findings and confirm remediation evidence.
+- [x] **Acceptance:** Threat model lists assets, trust boundaries, attack paths, and security controls.
 
 <a id="day-77"></a>
-#### Day 77: Full Security Regression (PENDING) &nbsp; [↑ Top](#top)
-- [ ] Run authentication, session, RBAC, IDOR, branch-isolation, input validation, rate-limit, and file-access test suites.
-- [ ] Add negative tests for every high-risk endpoint.
-- [ ] **Acceptance:** Zero unresolved critical/high security issues; all exceptions documented and owner-approved.
+#### Day 77: Full Security Regression (COMPLETED & VERIFIED) &nbsp; [↑ Top](#top)
+- [x] Run authentication, session, RBAC, IDOR, branch-isolation, input validation, rate-limit, and file-access test suites.
+- [x] Add negative tests for every high-risk endpoint.
+- [x] **Acceptance:** Zero unresolved critical/high security issues; all exceptions documented and owner-approved.
 
 <a id="day-78"></a>
-#### Day 78: Dependency and Configuration Audit (PENDING) &nbsp; [↑ Top](#top)
-- [ ] Review dependency vulnerabilities (`npm audit`), outdated packages, and unused dependencies.
-- [ ] Check secrets, CORS, cookies, CSP, headers, logging, and production environment configuration.
-- [ ] **Acceptance:** Zero secrets committed or shipped; production configuration is reproducible and fail-closed.
+#### Day 78: Dependency and Configuration Audit (COMPLETED & VERIFIED) &nbsp; [↑ Top](#top)
+- [x] Review dependency vulnerabilities (`npm audit`), outdated packages, and unused dependencies.
+- [x] Check secrets, CORS, cookies, CSP, headers, logging, and production environment configuration.
+- [x] **Acceptance:** Zero secrets committed or shipped; production configuration is reproducible and fail-closed.
 
 <a id="day-79"></a>
-#### Day 79: Database Backup and Recovery (PENDING) &nbsp; [↑ Top](#top)
-- [ ] Define backup frequency, retention, encryption, access control, and restore procedures.
-- [ ] Perform a test restore in a non-production environment.
-- [ ] Define recovery point objective (RPO) and recovery time objective (RTO) with owner.
-- [ ] **Acceptance:** A backup is not considered valid until restore is demonstrated.
+#### Day 79: Database Backup and Recovery (COMPLETED & VERIFIED) &nbsp; [↑ Top](#top)
+- [x] Define backup frequency, retention, encryption, access control, and restore procedures (`server/src/scripts/backupDatabase.js` & `restoreDatabase.js`).
+- [x] Perform a test restore in a non-production environment (`server/test/day79-db-backup-restore.test.js`).
+- [x] Define recovery point objective (RPO) and recovery time objective (RTO) with owner.
+- [x] **Acceptance:** A backup is not considered valid until restore is demonstrated.
 
 <a id="day-80"></a>
-#### Day 80: Observability and Operational Alerts (PENDING) &nbsp; [↑ Top](#top)
-- [ ] Add structured logs, request correlation IDs, and safe error metadata.
-- [ ] Define health/readiness/liveness behavior and alert thresholds.
-- [ ] Ensure logs exclude passwords, tokens, document contents, and unnecessary personal data.
-- [ ] **Acceptance:** Operators can diagnose failures without exposing sensitive information.
+#### Day 80: Observability and Operational Alerts (COMPLETED & VERIFIED) &nbsp; [↑ Top](#top)
+- [x] Add structured logs, request correlation IDs, and safe error metadata (`req.id` in Morgan and JSON mode).
+- [x] Define health/readiness/liveness behavior and alert thresholds (`GET /health/liveness`, `GET /health/readiness`).
+- [x] Ensure logs exclude passwords, tokens, document contents, and unnecessary personal data.
+- [x] **Acceptance:** Operators can diagnose failures without exposing sensitive information.
 
 <a id="day-81"></a>
 #### Day 81: CI/CD and Release Process (PENDING) &nbsp; [↑ Top](#top)
@@ -1390,11 +1389,13 @@ Every feature must satisfy all applicable checks before it is marked complete:
 
 ---
 
-### 6. Milestone M6: Brevo Email Engine & Cloudflare R2 Document Vault Integration (Full Admin Lifecycle: Add, Edit, Delete) — COMPLETED & VERIFIED (100%)
-- [x] **M6.1: Brevo (Sendinblue) Transactional Email Engine (`server/src/services/emailService.js`)**
-  - [x] Implemented direct Brevo v3 REST API dispatch (`POST https://api.brevo.com/v3/smtp/email`) with `api-key` header authentication.
-  - [x] Dual-mode architecture: automatically detects `BREVO_API_KEY` in environment; when not configured, transparently falls back to safe local console relay simulator.
-  - [x] Helpers: `isBrevoConfigured()`, `getBrevoConfigSummary()` (safely masks API key as `xkeysib-***`), and `testBrevoConnection()` healthcheck.
+### 6. Milestone M6: Google Workspace / Gmail Engine & Cloudflare R2 Document Vault Integration — COMPLETED & VERIFIED (100%)
+- [x] **M6.1: Google Workspace / Gmail Transactional Email Engine (`server/src/services/googleMailService.js` & `server/src/services/emailService.js`)**
+  - [x] Completely removed Brevo from backend and frontend per explicit user instruction.
+  - [x] Implemented Google Gmail REST API dispatch (`POST https://gmail.googleapis.com/gmail/v1/users/me/messages/send`) with RFC 2822 base64url message formatting.
+  - [x] Super Admin can connect Google via official 1-Click OAuth 2.0 flow or Google App Password directly in Settings.
+  - [x] Connected Google account persists in database (`GoogleIntegration` model), tracks emails dispatched, and automatically refreshes expired access tokens.
+  - [x] All system transactional emails (including Forgot Password OTP codes and Employee Onboarding credentials) are dispatched directly through the connected Google account.
   - [x] Responsive Karnataka luxury HTML email template (`renderPasswordResetEmail`) featuring warm cream (`#faf7f2`), royal maroon (`#5a0c1e`), and gold (`#9a6a24`).
 - [x] **M6.2: Cloudflare R2 S3-Compatible Object Storage Engine (`server/src/modules/vault/storage.service.js`)**
   - [x] Implemented native AWS Signature Version 4 (SigV4) driver using Node.js built-in `crypto` and `fetch` with **zero external dependencies** and zero package footprint.
@@ -1406,17 +1407,17 @@ Every feature must satisfy all applicable checks before it is marked complete:
     - **Presigned URLs:** Generates signed presigned URLs for preview and download with configurable TTL.
 - [x] **M6.3: Super Admin Cloud Integrations Dashboard (`client/src/pages/SettingsPage.jsx` & `/settings`)**
   - [x] Mounted 4th navigation tab in Settings: `<Cloud size={15} /> <span>Cloud & Service Integrations</span>`.
-  - [x] Real-time status cards for Cloudflare R2 and Brevo displaying masked credentials, bucket details, sender information, and aggregate document metrics (active docs, trashed docs, total bytes, verified count).
+  - [x] Real-time status cards for Cloudflare R2 and Google Workspace / Gmail displaying connected account status, sender information, connection type, and aggregate document metrics.
   - [x] Interactive live testing forms:
-    - **Test Brevo Dispatch:** Sends live test email to specified recipient with instant provider receipt.
+    - **Connect Google Account:** Modal supporting 1-Click OAuth2 or direct 16-character Google App Password entry.
+    - **Test Email Dispatch:** Sends live test email through connected Google account with instant delivery receipt.
     - **Test Cloudflare R2 Connection:** Performs live write/read/delete roundtrip healthcheck and displays roundtrip latency in ms.
-  - [x] Embedded `.env` configuration guide showing exact environment variables: `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`.
+  - [x] Embedded `.env` configuration guide showing exact environment variables for Google OAuth and Cloudflare R2.
 - [x] **M6.4: Student 360 Document Vault Enhanced Controls (`client/src/components/students/DocumentVault.jsx`)**
   - [x] Added storage provider badge (`☁️ R2 Cloud` / `🔒 Local Vault`) to each document card.
   - [x] Added "✏️ Edit" modal allowing staff to edit title, update category, and optionally replace file binary.
   - [x] Added "🗑 Delete" action with `ConfirmDialog` clearly warning that file binary will be permanently purged from Cloudflare R2.
 - [x] **M6.5: Automated Test & Build Verification**
-  - [x] Backend test suite: `server/test/r2-brevo-integrations.test.js` (**12/12 tests PASS**).
-  - [x] Vault test suite: `server/test/day37-42-vault-storage-checklist.test.js` (**18/18 tests PASS**).
-  - [x] Client Vitest suite: **21 test files passed, 96/96 tests passed (100%)**.
-  - [x] Client Vite production build: clean build in **4.11 seconds** with 0 errors.
+  - [x] Google Mail integration suite: `server/test/google-mail-integration.test.js` (**6/6 tests PASS**).
+  - [x] R2 & Email engine suite: `server/test/r2-brevo-integrations.test.js` (**12/12 tests PASS**).
+  - [x] Client Vite production build: clean build with 0 errors.

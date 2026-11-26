@@ -96,10 +96,41 @@ export const ForgotPasswordModal = ({ isOpen, onClose, onPasswordResetSuccess })
     }
   };
 
-  // OTP Box inputs handler
+  // Core 6-digit OTP verification executor
+  const executeVerifyOtp = async (codeToVerify) => {
+    const fullOtp = (codeToVerify || otpValues.join('')).trim();
+
+    if (fullOtp.length !== 6) {
+      setError('Please enter all 6 digits of the verification code.');
+      return;
+    }
+    if (loading) return;
+
+    setError('');
+    setLoading(true);
+    try {
+      const res = await authService.verifyResetOTP(email.trim().toLowerCase(), fullOtp);
+      const token = res.resetToken || res.data?.resetToken;
+      setResetToken(token);
+      setSuccessMsg('Code verified! Please create your new secure password.');
+      setStep(3);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid or expired verification code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // STEP 2: Verify 6-digit OTP (Form submit or manual button click)
+  const handleVerifyOtp = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    executeVerifyOtp();
+  };
+
+  // OTP Box inputs handler with auto-advance and automatic 6-digit verification
   const handleOtpChange = (index, value) => {
     setError('');
-    // Allow paste of 6 digits
+    // Allow paste of multiple digits via change event
     if (value.length > 1) {
       const pasted = value.replace(/\D/g, '').slice(0, 6);
       if (pasted.length > 0) {
@@ -110,6 +141,10 @@ export const ForgotPasswordModal = ({ isOpen, onClose, onPasswordResetSuccess })
         setOtpValues(newOtp);
         const nextIndex = Math.min(pasted.length, 5);
         otpInputsRef.current[nextIndex]?.focus();
+
+        if (pasted.length === 6) {
+          executeVerifyOtp(pasted);
+        }
       }
       return;
     }
@@ -123,36 +158,34 @@ export const ForgotPasswordModal = ({ isOpen, onClose, onPasswordResetSuccess })
     if (digit && index < 5) {
       otpInputsRef.current[index + 1]?.focus();
     }
+
+    // Automatically verify code when all 6 digits are filled
+    const fullOtp = newOtp.join('');
+    if (fullOtp.length === 6 && !newOtp.includes('')) {
+      executeVerifyOtp(fullOtp);
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text/plain').replace(/\D/g, '').slice(0, 6);
+    if (!pastedData) return;
+    const newOtp = ['', '', '', '', '', ''];
+    for (let i = 0; i < 6; i++) {
+      newOtp[i] = pastedData[i] || '';
+    }
+    setOtpValues(newOtp);
+    const nextIdx = Math.min(pastedData.length, 5);
+    otpInputsRef.current[nextIdx]?.focus();
+
+    if (pastedData.length === 6) {
+      executeVerifyOtp(pastedData);
+    }
   };
 
   const handleOtpKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
       otpInputsRef.current[index - 1]?.focus();
-    }
-  };
-
-  // STEP 2: Verify 6-digit OTP
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setError('');
-    const fullOtp = otpValues.join('');
-
-    if (fullOtp.length !== 6) {
-      setError('Please enter all 6 digits of the verification code.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await authService.verifyResetOTP(email.trim().toLowerCase(), fullOtp);
-      const token = res.resetToken || res.data?.resetToken;
-      setResetToken(token);
-      setSuccessMsg('Code verified! Please create your new secure password.');
-      setStep(3);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Invalid or expired verification code.');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -349,6 +382,7 @@ export const ForgotPasswordModal = ({ isOpen, onClose, onPasswordResetSuccess })
                     maxLength={6}
                     value={val}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
+                    onPaste={handleOtpPaste}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                     className="w-11 h-13 sm:w-12 sm:h-14 text-center font-mono text-xl font-bold bg-[#faf7f2] border-2 border-[#d9c7b8] rounded-xl text-[#5a0c1e] focus:outline-none focus:border-[#5a0c1e] focus:ring-2 focus:ring-[#9a6a24]/30 transition-all"
                   />
